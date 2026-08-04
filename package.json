@@ -1,0 +1,76 @@
+{
+	"name": "@sentdm/n8n-nodes-sent",
+	"version": "0.1.0",
+	"description": "Sent integration for n8n, supporting SMS, WhatsApp, RCS, contacts, templates, profiles, webhooks, and messaging workflows.",
+	"license": "MIT",
+	"homepage": "https://github.com/sentdm/n8n-nodes-sent#readme",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"sent",
+		"sms",
+		"whatsapp",
+		"rcs",
+		"messaging"
+	],
+	"author": {
+		"name": "Sent",
+		"email": "support@sent.dm"
+	},
+	"maintainers": [
+		"Sent maintainers <support@sent.dm>"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/sentdm/n8n-nodes-sent.git"
+	},
+	"bugs": {
+		"url": "https://github.com/sentdm/n8n-nodes-sent/issues"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	},
+	"files": [
+		"dist/credentials",
+		"dist/icons",
+		"dist/nodes",
+		"dist/package.json",
+		"README.md",
+		"LICENSE.md",
+		"CHANGELOG.md"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/SentApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/Sent/Sent.node.js",
+			"dist/nodes/SentTrigger/SentTrigger.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.42.0",
+		"@types/node": "^22.15.0",
+		"eslint": "9.32.0",
+		"prettier": "3.6.2",
+		"release-it": "^19.0.4",
+		"typescript": "5.9.2",
+		"vitest": "^3.2.4"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
