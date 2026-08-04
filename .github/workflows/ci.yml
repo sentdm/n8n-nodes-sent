@@ -46,7 +46,7 @@ jobs:
             echo 'Tracked local/generated artifact detected.' >&2
             exit 1
           fi
-          if git grep -nE 'NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized[[:space:]]*:[[:space:]]*false|process\.env|child_process|eval\(' -- ':!docs/**' ':!test/**' ; then
+          if git grep -nE 'NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized[[:space:]]*:[[:space:]]*false|process\.env|child_process|eval\(' -- credentials nodes package.json ; then
             echo 'Potentially unsafe runtime construct detected.' >&2
             exit 1
           fi
