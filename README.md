@@ -96,7 +96,6 @@ Importable JSON examples live in [`examples/workflows`](https://github.com/sentd
 ## Known limitations
 
 - Sent's documented v3 send schema has no scheduling input.
-- Some complex campaign, profile, template, and webhook filter objects use validated advanced JSON fields to preserve the current documented schema without inventing UI fields.
 - Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
 - The action node is deliberately scoped to sending messages and reading their status. Template authoring, user and seat administration, brand-profile onboarding, brand campaigns, and webhook administration are all console tasks and are not exposed as actions. `Message → Send` still selects an existing template, and the searchable picker still lists them.
 - Webhook lifecycle is owned by **Sent Trigger**, which registers and removes its own webhook on activation and deactivation. There is no action-node equivalent, so a manual change cannot orphan an active trigger.

@@ -1,9 +1,0 @@
-{
-  "name": "Sent - Inbound Message Webhook",
-  "nodes": [
-    { "parameters": { "eventTypes": ["message"], "messageSubtypes": ["received"], "options": { "retryCount": 3, "timeoutSeconds": 30 } }, "id": "trigger-8", "name": "Sent Inbound Message", "type": "@sentdm/n8n-nodes-sent.sentTrigger", "typeVersion": 1, "position": [0, 0] },
-    { "parameters": { "assignments": { "assignments": [{ "id": "event", "name": "verifiedEvent", "value": "={{$json.event}}", "type": "string" }, { "id": "key", "name": "idempotencyKey", "value": "={{$json.idempotencyKey}}", "type": "string" }] }, "options": {} }, "id": "edit-8", "name": "Normalize Inbound Event", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [260, 0] }
-  ],
-  "connections": { "Sent Inbound Message": { "main": [[{ "node": "Normalize Inbound Event", "type": "main", "index": 0 }]] } },
-  "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
-}

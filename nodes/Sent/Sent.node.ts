@@ -86,13 +86,9 @@ export class Sent implements INodeType {
 						limit,
 					);
 				} else {
-					const envelope = await sentApiRequest.call(this, request);
-					if (request.collectionKey && envelope.data && !Array.isArray(envelope.data)) {
-						const collection = (envelope.data as IDataObject)[request.collectionKey];
-						records = Array.isArray(collection) ? (collection as IDataObject[]) : unwrapEnvelope(envelope);
-					} else {
-						records = unwrapEnvelope(envelope);
-					}
+					// Every operation that sets `collectionKey` also sets `paginated`, so the
+					// branch above is the only collection unwrapper.
+					records = unwrapEnvelope(await sentApiRequest.call(this, request));
 				}
 
 				returnData.push(

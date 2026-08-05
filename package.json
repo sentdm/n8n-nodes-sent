@@ -1,7 +1,7 @@
 {
 	"name": "@sentdm/n8n-nodes-sent",
 	"version": "0.1.0",
-	"description": "Sent integration for n8n, supporting SMS, WhatsApp, RCS, contacts, templates, profiles, webhooks, and messaging workflows.",
+	"description": "Send SMS, WhatsApp and RCS messages with Sent, look up numbers, read delivery status, and start workflows from verified Sent webhooks.",
 	"license": "MIT",
 	"homepage": "https://github.com/sentdm/n8n-nodes-sent#readme",
 	"keywords": [

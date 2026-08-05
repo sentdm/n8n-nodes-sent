@@ -1,9 +1,9 @@
 {
-  "name": "Sent - Send Template with Variables",
+  "name": "Sent - Send a Template Message",
   "nodes": [
-    { "parameters": {}, "id": "manual-2", "name": "Manual Trigger", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [0, 0] },
-    { "parameters": { "resource": "message", "operation": "send", "recipients": "+15555550123", "channels": ["sent"], "messageType": "template", "messageTemplate": { "mode": "name", "value": "YOUR_TEMPLATE_NAME" }, "templateParameters": "{\"first_name\":\"Example\"}", "requestOptions": { "sandbox": true, "idempotencyKey": "={{$execution.id + '-' + $itemIndex}}" } }, "id": "sent-2", "name": "Send Template", "type": "@sentdm/n8n-nodes-sent.sent", "typeVersion": 1, "position": [260, 0] }
+    { "parameters": {}, "id": "manual-2", "name": "When clicking 'Execute workflow'", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [0, 0] },
+    { "parameters": { "resource": "message", "operation": "send", "recipients": "+14155550123,+442079460123", "channels": ["sent"], "messageType": "template", "messageTemplate": { "__rl": true, "mode": "name", "value": "YOUR_TEMPLATE_NAME" }, "templateParameters": "{\"first_name\":\"Ada\"}", "requestOptions": { "sandbox": true, "idempotencyKey": "={{ $execution.id + '-' + $itemIndex }}" } }, "id": "sent-2", "name": "Send Template Message", "type": "@sentdm/n8n-nodes-sent.sent", "typeVersion": 1, "position": [240, 0] }
   ],
-  "connections": { "Manual Trigger": { "main": [[{ "node": "Send Template", "type": "main", "index": 0 }]] } },
+  "connections": { "When clicking 'Execute workflow'": { "main": [[{ "node": "Send Template Message", "type": "main", "index": 0 }]] } },
   "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
 }
