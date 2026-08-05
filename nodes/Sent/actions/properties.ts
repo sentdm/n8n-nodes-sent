@@ -7,8 +7,6 @@ const resourceOptions = [
 	{ name: 'Message', value: 'message' },
 	{ name: 'Number Lookup', value: 'numberLookup' },
 	{ name: 'Profile', value: 'profile' },
-	{ name: 'Template', value: 'template' },
-	{ name: 'User', value: 'user' },
 	{ name: 'Webhook', value: 'webhook' },
 ];
 
@@ -21,7 +19,6 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 		{ name: 'Update', value: 'update', action: 'Update a brand campaign' },
 	],
 	contact: [
-		{ name: 'Delete', value: 'delete', action: 'Delete a contact' },
 		{ name: 'Get', value: 'get', action: 'Get a contact' },
 		{ name: 'Get Many', value: 'getMany', action: 'Get many contacts' },
 	],
@@ -38,20 +35,6 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 		{ name: 'Get', value: 'get', action: 'Get a profile' },
 		{ name: 'Get Many', value: 'getMany', action: 'Get many profiles' },
 		{ name: 'Update', value: 'update', action: 'Update a profile' },
-	],
-	template: [
-		{ name: 'Create', value: 'create', action: 'Create a template' },
-		{ name: 'Delete', value: 'delete', action: 'Delete a template' },
-		{ name: 'Get', value: 'get', action: 'Get a template' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many templates' },
-		{ name: 'Update', value: 'update', action: 'Update a template' },
-	],
-	user: [
-		{ name: 'Get', value: 'get', action: 'Get a user' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many users' },
-		{ name: 'Invite', value: 'invite', action: 'Invite a user' },
-		{ name: 'Remove', value: 'remove', action: 'Remove a user' },
-		{ name: 'Update Role', value: 'updateRole', action: 'Update a user role' },
 	],
 	webhook: [
 		{ name: 'Create', value: 'create', action: 'Create a webhook' },
@@ -91,7 +74,7 @@ const idFields: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		displayOptions: { show: { resource: ['contact'], operation: ['delete', 'get'] } },
+		displayOptions: { show: { resource: ['contact'], operation: ['get'] } },
 	},
 	{
 		displayName: 'Message ID',
@@ -126,22 +109,6 @@ const idFields: INodeProperties[] = [
 		displayOptions: { show: { resource: ['campaign'], operation: ['delete', 'update'] } },
 	},
 	{
-		displayName: 'Template ID',
-		name: 'templateId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['template'], operation: ['delete', 'get', 'update'] } },
-	},
-	{
-		displayName: 'User ID',
-		name: 'userId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['user'], operation: ['get', 'remove', 'updateRole'] } },
-	},
-	{
 		displayName: 'Webhook ID',
 		name: 'webhookId',
 		type: 'string',
@@ -159,7 +126,7 @@ const paginationFields: INodeProperties[] = [
 		default: false,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'template', 'webhook'],
+				resource: ['contact', 'webhook'],
 				operation: ['getMany', 'getEvents'],
 			},
 		},
@@ -173,7 +140,7 @@ const paginationFields: INodeProperties[] = [
 		default: 50,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'template', 'webhook'],
+				resource: ['contact', 'webhook'],
 				operation: ['getMany', 'getEvents'],
 				returnAll: [false],
 			},
@@ -280,82 +247,11 @@ export const sentProperties: INodeProperties[] = [
 		displayOptions: { show: { resource: ['message'], operation: ['send'], messageType: ['text'] } },
 	},
 	{
-		displayName: 'Email',
-		name: 'email',
-		type: 'string',
-		required: true,
-		default: '',
-		placeholder: 'e.g. person@example.com',
-		displayOptions: { show: { resource: ['user'], operation: ['invite'] } },
-	},
-	{
 		displayName: 'Name',
 		name: 'name',
 		type: 'string',
 		default: '',
-		displayOptions: { show: { resource: ['profile', 'user'], operation: ['create', 'update', 'invite'] } },
-	},
-	{
-		displayName: 'Name',
-		name: 'name',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { resource: ['template'], operation: ['update'] } },
-	},
-	{
-		displayName: 'Role',
-		name: 'role',
-		type: 'options',
-		options: [
-			{ name: 'Admin', value: 'admin' },
-			{ name: 'Billing', value: 'billing' },
-			{ name: 'Developer', value: 'developer' },
-		],
-		default: 'developer',
-		displayOptions: { show: { resource: ['user'], operation: ['invite', 'updateRole'] } },
-	},
-	{
-		displayName: 'Template Category',
-		name: 'category',
-		type: 'options',
-		options: [
-			{ name: 'Authentication', value: 'AUTHENTICATION' },
-			{ name: 'Marketing', value: 'MARKETING' },
-			{ name: 'Utility', value: 'UTILITY' },
-		],
-		default: 'UTILITY',
-		displayOptions: { show: { resource: ['template'], operation: ['create', 'update'] } },
-	},
-	{
-		displayName: 'Language',
-		name: 'language',
-		type: 'string',
-		default: 'en_US',
-		displayOptions: { show: { resource: ['template'], operation: ['create', 'update'] } },
-	},
-	{
-		displayName: 'Definition JSON',
-		name: 'definitionJson',
-		type: 'json',
-		default: '{}',
-		displayOptions: { show: { resource: ['template'], operation: ['create', 'update'] } },
-		description: 'Template definition object following the Sent Template Definition reference',
-	},
-	{
-		displayName: 'Creation Source',
-		name: 'creationSource',
-		type: 'string',
-		default: 'from-api',
-		displayOptions: { show: { resource: ['template'], operation: ['create'] } },
-		description: 'Optional source label recorded by Sent',
-	},
-	{
-		displayName: 'Submit for Review',
-		name: 'submitForReview',
-		type: 'boolean',
-		default: false,
-		displayOptions: { show: { resource: ['template'], operation: ['create', 'update'] } },
-		description: 'Whether to submit the template for review instead of saving it as a draft',
+		displayOptions: { show: { resource: ['profile'], operation: ['create', 'update'] } },
 	},
 	{
 		displayName: 'Campaign JSON',
@@ -466,40 +362,6 @@ export const sentProperties: INodeProperties[] = [
 		type: 'collection',
 		placeholder: 'Add Filter',
 		default: {},
-		displayOptions: { show: { resource: ['template'], operation: ['getMany'] } },
-		options: [
-			{
-				displayName: 'Category',
-				name: 'category',
-				type: 'options',
-				options: [
-					{ name: 'Authentication', value: 'AUTHENTICATION' },
-					{ name: 'Marketing', value: 'MARKETING' },
-					{ name: 'Utility', value: 'UTILITY' },
-				],
-				default: 'UTILITY',
-			},
-			{ displayName: 'Is Welcome Playground', name: 'isWelcomePlayground', type: 'boolean', default: false },
-			{ displayName: 'Search', name: 'search', type: 'string', default: '' },
-			{
-				displayName: 'Status',
-				name: 'status',
-				type: 'options',
-				options: [
-					{ name: 'Approved', value: 'APPROVED' },
-					{ name: 'Pending', value: 'PENDING' },
-					{ name: 'Rejected', value: 'REJECTED' },
-				],
-				default: 'APPROVED',
-			},
-		],
-	},
-	{
-		displayName: 'Filters',
-		name: 'filters',
-		type: 'collection',
-		placeholder: 'Add Filter',
-		default: {},
 		displayOptions: { show: { resource: ['webhook'], operation: ['getMany'] } },
 		options: [
 			{ displayName: 'Is Active', name: 'isActive', type: 'boolean', default: true },
@@ -527,7 +389,7 @@ export const sentProperties: INodeProperties[] = [
 		default: {},
 		displayOptions: {
 			show: {
-				operation: ['complete', 'create', 'invite', 'remove', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update', 'updateRole'],
+				operation: ['complete', 'create', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update'],
 			},
 		},
 		options: mutationOptions,
@@ -538,7 +400,7 @@ export const sentProperties: INodeProperties[] = [
 		type: 'collection',
 		placeholder: 'Add Option',
 		default: {},
-		displayOptions: { show: { resource: ['campaign', 'contact', 'profile', 'template'], operation: ['delete'] } },
+		displayOptions: { show: { resource: ['campaign', 'profile'], operation: ['delete'] } },
 		options: mutationOptions,
 	},
 ];

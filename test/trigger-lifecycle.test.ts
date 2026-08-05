@@ -87,7 +87,7 @@ describe('Sent Trigger lifecycle', () => {
 					},
 				},
 			],
-			{ eventTypes: ['message'], messageSubtypes: ['delivered'], templateNames: '', options: {} },
+			{ eventTypes: ['message'], messageSubtypes: ['delivered'], options: {} },
 		);
 		await expect(methods.create.call(context as never)).resolves.toBe(true);
 		expect(data).toEqual({ webhookId: 'wh-new', signingSecret: 'whsec_dGVzdA==' });
@@ -104,7 +104,7 @@ describe('Sent Trigger lifecycle', () => {
 		const context = hookContext(
 			{},
 			[{ statusCode: 201, headers: {}, body: { success: true, data: { id: 'wh-new' } } }],
-			{ eventTypes: ['message'], messageSubtypes: [], templateNames: '', options: {} },
+			{ eventTypes: ['message'], messageSubtypes: [], options: {} },
 		);
 		await expect(methods.create.call(context as never)).rejects.toThrow(/signing secret/);
 	});

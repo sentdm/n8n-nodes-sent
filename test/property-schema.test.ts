@@ -34,9 +34,9 @@ describe('Sent action parameter schema', () => {
 
 	it.each([
 		['message', 'send'],
-		['contact', 'delete'],
-		['template', 'update'],
-		['user', 'remove'],
+		['campaign', 'delete'],
+		['profile', 'update'],
+		['campaign', 'create'],
 		['webhook', 'rotateSecret'],
 	])('displays the shared Options collection for %s.%s', (resource, operation) => {
 		const resolved = getNodeParameters(

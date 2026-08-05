@@ -69,10 +69,7 @@ function filters(context: IExecuteFunctions, itemIndex: number): IDataObject {
 		search: value.search,
 		channel: value.channel,
 		phone: value.phone,
-		status: value.status,
-		category: value.category,
 		is_active: value.isActive,
-		is_welcome_playground: value.isWelcomePlayground,
 	});
 }
 
@@ -136,7 +133,6 @@ export function buildOperation(
 		// `getMany` renders no Contact ID field, so it must resolve before identifier().
 		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/contacts'), query: filters(context, itemIndex), collectionKey: 'contacts', paginated: true };
 		const contactId = identifier(context, itemIndex, 'contactId');
-		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `/v3/contacts/${contactId}`, {});
 		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/contacts/${contactId}`);
 	}
 
@@ -180,40 +176,6 @@ export function buildOperation(
 			}
 			return baseRequest(context, itemIndex, 'PATCH', `/v3/profiles/${profileId}`, fields);
 		}
-	}
-
-	if (resource === 'template') {
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/templates'), query: filters(context, itemIndex), collectionKey: 'templates', paginated: true };
-		if (operation === 'create') return baseRequest(context, itemIndex, 'POST', '/v3/templates', {
-			category: parameter(context, 'category', itemIndex),
-			language: parameter(context, 'language', itemIndex),
-			definition: jsonParameter(context, 'definitionJson', itemIndex, 'Definition JSON'),
-			creation_source: parameter(context, 'creationSource', itemIndex),
-			submit_for_review: context.getNodeParameter('submitForReview', itemIndex, false) as boolean,
-		});
-		const templateId = identifier(context, itemIndex, 'templateId');
-		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `/v3/templates/${templateId}`, {});
-		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/templates/${templateId}`);
-		if (operation === 'update') return baseRequest(context, itemIndex, 'PUT', `/v3/templates/${templateId}`, {
-			name: parameter(context, 'name', itemIndex),
-			category: parameter(context, 'category', itemIndex),
-			language: parameter(context, 'language', itemIndex),
-			definition: jsonParameter(context, 'definitionJson', itemIndex, 'Definition JSON'),
-			submit_for_review: context.getNodeParameter('submitForReview', itemIndex, false) as boolean,
-		});
-	}
-
-	if (resource === 'user') {
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/users'), collectionKey: 'users' };
-		if (operation === 'invite') return baseRequest(context, itemIndex, 'POST', '/v3/users', {
-			email: parameter(context, 'email', itemIndex),
-			name: parameter(context, 'name', itemIndex),
-			role: parameter(context, 'role', itemIndex),
-		});
-		const userId = identifier(context, itemIndex, 'userId');
-		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/users/${userId}`);
-		if (operation === 'remove') return baseRequest(context, itemIndex, 'DELETE', `/v3/users/${userId}`, {});
-		if (operation === 'updateRole') return baseRequest(context, itemIndex, 'PATCH', `/v3/users/${userId}`, { role: parameter(context, 'role', itemIndex) });
 	}
 
 	if (resource === 'webhook') {

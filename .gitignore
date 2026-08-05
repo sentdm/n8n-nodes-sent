@@ -10,3 +10,6 @@ coverage
 # pnpm works locally, but its lockfile is not tracked so the two cannot silently diverge.
 pnpm-lock.yaml
 pnpm-workspace.yaml
+
+# Playwright MCP session artifacts
+.playwright-mcp/

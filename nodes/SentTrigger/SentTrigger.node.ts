@@ -72,10 +72,7 @@ export class SentTrigger implements INodeType {
 				displayName: 'Event Categories',
 				name: 'eventTypes',
 				type: 'multiOptions',
-				options: [
-					{ name: 'Message', value: 'message' },
-					{ name: 'Templates', value: 'templates' },
-				],
+				options: [{ name: 'Message', value: 'message' }],
 				default: ['message'],
 				required: true,
 				description: 'Parent categories to register with Sent',
@@ -89,14 +86,6 @@ export class SentTrigger implements INodeType {
 				displayOptions: { show: { eventTypes: ['message'] } },
 				description:
 					'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-			},
-			{
-				displayName: 'Template Names',
-				name: 'templateNames',
-				type: 'string',
-				default: '',
-				displayOptions: { show: { eventTypes: ['templates'] } },
-				description: 'Optional comma-separated template names to receive',
 			},
 			{
 				displayName: 'Options',
@@ -188,17 +177,12 @@ export class SentTrigger implements INodeType {
 				}
 				const eventTypes = this.getNodeParameter('eventTypes') as string[];
 				const messageSubtypes = this.getNodeParameter('messageSubtypes', []) as string[];
-				const templateNames = String(this.getNodeParameter('templateNames', ''))
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean);
 				const options = this.getNodeParameter('options', {}) as {
 					retryCount?: number;
 					timeoutSeconds?: number;
 				};
 				const eventFilters: Record<string, string[]> = {};
 				if (messageSubtypes.length > 0) eventFilters.message = messageSubtypes;
-				if (templateNames.length > 0) eventFilters.templates = templateNames;
 
 				const envelope = await sentApiRequest.call(this, {
 					method: 'POST',

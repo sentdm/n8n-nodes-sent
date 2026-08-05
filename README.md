@@ -33,11 +33,9 @@ See Sent's [authentication documentation](https://docs.sent.dm/reference/api/aut
 | --- | --- |
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
-| Contact | Delete, Get, Get Many |
-| Template | Create, Delete, Get, Get Many, Update |
+| Contact | Get, Get Many |
 | Profile | Create, Delete, Get, Get Many, Update, Complete Setup |
 | Brand Campaign | Create, Delete, Get Many, Update |
-| User | Get, Get Many, Invite, Update Role, Remove |
 | Webhook | Create, Delete, Get, Get Many, Update, Toggle Status, Rotate Signing Secret, Test, Get Events, Get Event Types |
 | Number Lookup | Lookup |
 
@@ -56,7 +54,7 @@ The channel choices follow Sent's documented semantics:
 
 Sent currently documents no scheduling field in the v3 send-message request, so this package does not invent one.
 
-**Template Parameters**, **Definition JSON**, **Campaign JSON**, **Event Filters JSON**, and **Additional Fields JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
+**Template Parameters**, **Campaign JSON**, **Event Filters JSON**, and **Additional Fields JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
 
 ## Sandbox and idempotency
 
@@ -64,13 +62,13 @@ Mutations share one **Options** collection carrying **Sandbox** and **Idempotenc
 
 ## Pagination
 
-Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. Profile, campaign, and user list endpoints currently return their complete documented collection without pagination parameters.
+Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. Profile and campaign list endpoints currently return their complete documented collection without pagination parameters.
 
 ## Sent Trigger
 
 The trigger registers the n8n production webhook URL when a workflow activates, stores the returned webhook ID and signing secret in node workflow static data, checks for an existing registration, and deletes only that stored webhook when the workflow deactivates. Sent must be able to reach a public HTTPS URL; non-HTTPS URLs, `localhost`, `.local` names, IPv4 loopback/private ranges, `0.0.0.0`, and IPv6 loopback are rejected.
 
-The trigger dynamically loads active `message.*` event subtypes from `GET /v3/webhooks/event-types`. It falls back to the documented static subtype list whenever that call fails or returns no active `message.*` type, so the subtype picker is never empty. Template filters accept comma-separated template names.
+The trigger subscribes to the `message` event category. It dynamically loads active `message.*` subtypes from `GET /v3/webhooks/event-types` and falls back to the documented static subtype list whenever that call fails or returns no active `message.*` type, so the subtype picker is never empty.
 
 ### Webhook security
 
@@ -105,7 +103,7 @@ Importable JSON examples live in [`examples/workflows`](https://github.com/sentd
 - Sent's documented v3 send schema has no scheduling input.
 - Some complex campaign, profile, template, and webhook filter objects use validated advanced JSON fields to preserve the current documented schema without inventing UI fields.
 - Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
-- Conversation endpoints and contact create/update/message-summary are not exposed by this package.
+- The node is scoped to messaging and delivery. Template authoring and User/seat administration are console tasks and are not exposed as actions, and neither are the Conversation endpoints or contact create/update/delete/message-summary. `Message → Send` still selects an existing template, and the searchable picker still lists them.
 
 ## Development and testing
 

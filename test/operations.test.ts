@@ -24,14 +24,6 @@ interface Row {
 	};
 }
 
-const templateFields = {
-	category: 'UTILITY',
-	language: 'en_US',
-	definitionJson: '{"body":{"text":"hi"}}',
-	creationSource: 'from-api',
-	submitForReview: false,
-};
-
 const webhookFields = {
 	displayName: 'n8n',
 	endpointUrl: 'https://n8n.example.com/webhook/sent',
@@ -50,7 +42,6 @@ const matrix: Row[] = [
 	{ resource: 'message', operation: 'getActivities', parameters: { messageId: 'm1' }, expected: { method: 'GET', path: '/v3/messages/m1/activities' } },
 	{ resource: 'message', operation: 'send', parameters: { recipients: '+14155550123', channels: ['sent'], messageType: 'text', text: 'Hello' }, expected: { method: 'POST', path: '/v3/messages' } },
 
-	{ resource: 'contact', operation: 'delete', parameters: { contactId: 'c1' }, expected: { method: 'DELETE', path: '/v3/contacts/c1' } },
 	{ resource: 'contact', operation: 'get', parameters: { contactId: 'c1' }, expected: { method: 'GET', path: '/v3/contacts/c1' } },
 	{ resource: 'contact', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/contacts', collectionKey: 'contacts', paginated: true } },
 
@@ -67,18 +58,6 @@ const matrix: Row[] = [
 	{ resource: 'profile', operation: 'get', parameters: { profileId: 'p1' }, expected: { method: 'GET', path: '/v3/profiles/p1' } },
 	{ resource: 'profile', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/profiles', collectionKey: 'profiles' } },
 	{ resource: 'profile', operation: 'update', parameters: { profileId: 'p1', name: 'Acme', additionalFieldsJson: '{}' }, expected: { method: 'PATCH', path: '/v3/profiles/p1' } },
-
-	{ resource: 'template', operation: 'create', parameters: templateFields, expected: { method: 'POST', path: '/v3/templates' } },
-	{ resource: 'template', operation: 'delete', parameters: { templateId: 't1' }, expected: { method: 'DELETE', path: '/v3/templates/t1' } },
-	{ resource: 'template', operation: 'get', parameters: { templateId: 't1' }, expected: { method: 'GET', path: '/v3/templates/t1' } },
-	{ resource: 'template', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/templates', collectionKey: 'templates', paginated: true } },
-	{ resource: 'template', operation: 'update', parameters: { templateId: 't1', name: 'Welcome', ...templateFields }, expected: { method: 'PUT', path: '/v3/templates/t1' } },
-
-	{ resource: 'user', operation: 'get', parameters: { userId: 'u1' }, expected: { method: 'GET', path: '/v3/users/u1' } },
-	{ resource: 'user', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/users', collectionKey: 'users' } },
-	{ resource: 'user', operation: 'invite', parameters: { email: 'person@example.com', name: 'Person', role: 'developer' }, expected: { method: 'POST', path: '/v3/users' } },
-	{ resource: 'user', operation: 'remove', parameters: { userId: 'u1' }, expected: { method: 'DELETE', path: '/v3/users/u1' } },
-	{ resource: 'user', operation: 'updateRole', parameters: { userId: 'u1', role: 'admin' }, expected: { method: 'PATCH', path: '/v3/users/u1' } },
 
 	{ resource: 'webhook', operation: 'create', parameters: webhookFields, expected: { method: 'POST', path: '/v3/webhooks' } },
 	{ resource: 'webhook', operation: 'delete', parameters: { webhookId: 'w1' }, expected: { method: 'DELETE', path: '/v3/webhooks/w1' } },
@@ -133,11 +112,22 @@ describe('Sent operation matrix', () => {
 		['conversation', 'getMessages'],
 		['contact', 'create'],
 		['contact', 'update'],
+		['contact', 'delete'],
 		['contact', 'getMessageSummary'],
+		['template', 'create'],
+		['template', 'delete'],
+		['template', 'get'],
+		['template', 'getMany'],
+		['template', 'update'],
+		['user', 'get'],
+		['user', 'getMany'],
+		['user', 'invite'],
+		['user', 'remove'],
+		['user', 'updateRole'],
 	])('rejects the removed operation %s.%s', (resource, operation) => {
 		expect(() =>
 			buildOperation(
-				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1' }) as never,
+				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1', templateId: 't1', userId: 'u1' }) as never,
 				0,
 				resource,
 				operation,
@@ -161,9 +151,9 @@ describe('Sent operation request bodies', () => {
 
 	it('adds sandbox to the body of a mutation that supports it', () => {
 		const request = buildOperation(
-			executeContext({ templateId: 't1', requestOptions: { sandbox: true } }) as never,
+			executeContext({ profileId: 'p1', requestOptions: { sandbox: true } }) as never,
 			0,
-			'template',
+			'profile',
 			'delete',
 		);
 
@@ -259,14 +249,13 @@ describe('Sent operation request bodies', () => {
 		expect(request.path).toBe('/v3/contacts/a%2Fb%3Fc');
 	});
 
-	it.each(['contactId', 'messageId', 'templateId', 'userId', 'webhookId'])(
+	it.each(['contactId', 'messageId', 'profileId', 'webhookId'])(
 		'requires %s before making a request',
 		(field) => {
 			const byField: Record<string, [string, string]> = {
 				contactId: ['contact', 'get'],
 				messageId: ['message', 'get'],
-				templateId: ['template', 'get'],
-				userId: ['user', 'get'],
+				profileId: ['profile', 'get'],
 				webhookId: ['webhook', 'get'],
 			};
 			const [resource, operation] = byField[field];
