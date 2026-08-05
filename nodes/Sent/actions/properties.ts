@@ -4,7 +4,9 @@ const resourceOptions = [
 	{ name: 'Account', value: 'account' },
 	{ name: 'Contact', value: 'contact' },
 	{ name: 'Message', value: 'message' },
-	{ name: 'Number Lookup', value: 'numberLookup' },
+	// Resource names are nouns; the verb belongs to the operation. "Number Lookup" +
+	// "Lookup" also repeated itself, which the UX guidelines forbid.
+	{ name: 'Phone Number', value: 'numberLookup' },
 ];
 
 const operations: Record<

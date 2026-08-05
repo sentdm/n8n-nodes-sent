@@ -13,7 +13,7 @@ values, and turn Sandbox off when you are ready to send for real.
 | --- | --- | --- | --- |
 | 01 | [Send a Text Message](01-send-text-message.json) | `Message → Send` | The smallest useful send: free-form text, sandbox, and a per-item idempotency key |
 | 02 | [Send a Template Message](02-send-template-message.json) | `Message → Send` | Sending an approved template with variables to several recipients |
-| 03 | [Validate a Number Before Sending](03-validate-number-before-sending.json) | `Number Lookup → Lookup`, `Message → Send` | Branching on a lookup result so unreachable numbers are skipped instead of billed |
+| 03 | [Validate a Number Before Sending](03-validate-number-before-sending.json) | `Phone Number → Lookup`, `Message → Send` | Branching on a lookup result so unreachable numbers are skipped instead of billed |
 | 04 | [Track Delivery Status](04-track-delivery-status.json) | `Message → Get`, `Message → Get Activities` | Reading a message and then its per-channel delivery timeline |
 | 05 | [Message Contacts in Batches](05-message-contacts-in-batches.json) | `Contact → Get Many`, `Message → Send` | Paginated contact retrieval fed through **Loop Over Items** so large lists send in controlled batches |
 | 06 | [Inbound Message Trigger](06-inbound-message-trigger.json) | `Sent Trigger` | Starting a workflow from a signature-verified inbound message |

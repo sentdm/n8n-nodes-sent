@@ -34,7 +34,7 @@ See Sent's [authentication documentation](https://docs.sent.dm/reference/api/aut
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
 | Contact | Get, Get Many |
-| Number Lookup | Lookup |
+| Phone Number | Lookup |
 
 The endpoint-by-endpoint matrix is in [API coverage](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/api-coverage.md).
 
