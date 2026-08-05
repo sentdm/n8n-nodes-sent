@@ -10,9 +10,11 @@ export class SentApi implements ICredentialType {
 
 	displayName = 'Sent API';
 
+	// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
+	// icon renders in, so the dark glyph belongs to the light theme and vice versa.
 	icon = {
-		light: 'file:../icons/sent-logo.svg',
-		dark: 'file:../icons/sent-logo.dark.svg',
+		light: 'file:../icons/sent-dark-icon.svg',
+		dark: 'file:../icons/sent-light-icon.svg',
 	} as const;
 
 	documentationUrl = 'https://docs.sent.dm/reference/api/authentication';

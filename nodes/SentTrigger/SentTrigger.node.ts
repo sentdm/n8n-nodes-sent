@@ -45,8 +45,10 @@ export class SentTrigger implements INodeType {
 		displayName: 'Sent Trigger',
 		name: 'sentTrigger',
 		icon: {
-			light: 'file:../../icons/sent-logo.svg',
-			dark: 'file:../../icons/sent-logo.dark.svg',
+		// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
+		// icon renders in, so the dark glyph belongs to the light theme and vice versa.
+			light: 'file:../../icons/sent-dark-icon.svg',
+			dark: 'file:../../icons/sent-light-icon.svg',
 		},
 		group: ['trigger'],
 		version: 1,

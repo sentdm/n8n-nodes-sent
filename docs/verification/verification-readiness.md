@@ -11,7 +11,7 @@ Environment: Node.js `v24.6.0`, npm `11.17.0`, pnpm `11.7.0`, `@n8n/node-cli/0.4
 | `pnpm install` | 0 | Lockfile satisfied; 824 resolved dependencies (153 prod, 669 dev, 95 optional, 69 peer) |
 | `pnpm run lint` | 0 | `n8n-node lint` 0.42.0, no errors or warnings |
 | `pnpm exec tsc --noEmit` | 0 | No type errors under `strict` + `noUnusedLocals` |
-| `pnpm test` | 0 | 8 files / **142 tests** passed |
+| `pnpm test` | 0 | 9 files / **157 tests** passed |
 | `pnpm run build` | 0 | TypeScript build and static-file copy successful |
 | `npm pack --dry-run` | 0 | 27 files, 20.9 kB packed / 87.8 kB unpacked |
 | `npm audit --omit=dev` | 0 | **0 vulnerabilities** |
@@ -29,7 +29,7 @@ Only compiled output and required metadata ship:
 ```
 CHANGELOG.md  LICENSE.md  README.md  package.json
 dist/credentials/SentApi.credentials.{js,d.ts}
-dist/icons/sent-logo.svg  dist/icons/sent-logo.dark.svg
+dist/icons/sent-dark-icon.svg  dist/icons/sent-light-icon.svg
 dist/nodes/Sent/**  dist/nodes/SentTrigger/**  dist/package.json
 ```
 
@@ -52,7 +52,7 @@ No tests, examples, docs, plans, CI workflows, or source `.ts` files are include
 | Errors safe and actionable | Envelope, 204, 401, 422, 429, network, and timeout paths; redaction asserted against `error.message`, not only `JSON.stringify` | Pass | Live 401/403/5xx checks |
 | No runtime dependencies | `package.json` declares no `dependencies`; the production audit is 0 | Pass | None |
 | MIT license | `LICENSE.md`, `package.json` | Pass | None |
-| Branding | Square `viewBox="0 0 64 64"` Sent chevron, light and dark, on both nodes and the credential | Pass | Brand-owner sign-off |
+| Branding | Supplied Sent chevron, square `viewBox="0 0 24 24"`, on both nodes and the credential. `test/icons.test.ts` asserts the light theme gets the dark glyph and vice versa, since the files are named by glyph colour | Pass | Brand-owner sign-off |
 | README, support, security | README, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, all pointing at `support@sent.dm` | Pass | None |
 | CI quality gates | `.github/workflows/ci.yml`; the runtime-safety grep is scoped to shipped sources so it cannot match itself | Pass locally | Run in the public repository |
 | Publication and provenance | `.github/workflows/publish.yml`: `id-token: write`, SHA-pinned actions, pinned npm, tag/version gate, provenance, post-publish scan | Configured, not run | Bootstrap npm, add a Trusted Publisher, push a tag |

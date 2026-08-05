@@ -9,7 +9,7 @@ Do these steps in order. They require account ownership and authorization, and c
 - [ ] Confirm control of the `@sentdm` npm scope and permission to publish `@sentdm/n8n-nodes-sent` publicly.
 - [x] MIT license holder is Sent.dm, matching `LICENSE.md`.
 - [x] Support, security, and Code of Conduct contact is `support@sent.dm` across README, `SECURITY.md`, and `CODE_OF_CONDUCT.md`.
-- [x] Icons are the Sent chevron mark, square (`viewBox="0 0 64 64"`), in light and dark variants, on both nodes and the credential.
+- [x] Icons are the supplied Sent chevron mark, square (`viewBox="0 0 24 24"`), in both theme variants, on both nodes and the credential.
 
 ## 2. Make source public
 
