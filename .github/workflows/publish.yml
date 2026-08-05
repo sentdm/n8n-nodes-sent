@@ -1,0 +1,74 @@
+name: Publish
+
+on:
+  push:
+    tags: ['*.*.*']
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'sentdm/n8n-nodes-sent'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # Third-party actions are pinned to commit SHAs: this job holds `id-token: write`
+      # and publishes to npm, so a retagged `@v4` would be a direct supply-chain path.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Use an npm version that supports Trusted Publishing
+        run: npm install --global npm@11.19.0
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Require an exact package-version tag
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "$package_version" != "$GITHUB_REF_NAME" ]; then
+            echo "package.json version $package_version does not match tag $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          if npm view "@sentdm/n8n-nodes-sent@$package_version" version >/dev/null 2>&1; then
+            echo "@sentdm/n8n-nodes-sent@$package_version already exists; refusing to republish" >&2
+            exit 1
+          fi
+
+      - name: Test
+        run: npm test
+
+      # `n8n-node release` runs lint and build itself when GITHUB_ACTIONS is set, and its
+      # build starts with `rimraf('dist')`. Repeating lint/build/`npm pack --dry-run` here
+      # would inspect an artifact that is deleted and rebuilt before publish, so it is not
+      # repeated. Note this means the packed-contents inspection and the tracked-artifact
+      # scan live only in CI: tag a commit that CI has run on.
+      - name: Publish with provenance
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_CONFIG_ACCESS: public
+        run: npm run release
+
+      - name: Scan published package
+        shell: bash
+        run: |
+          scan_output="$(npx --yes @n8n/scan-community-package@0.31.0 "@sentdm/n8n-nodes-sent@$GITHUB_REF_NAME" 2>&1)"
+          printf '%s\n' "$scan_output"
+          if ! grep -q 'has passed all security checks' <<< "$scan_output"; then
+            echo 'Published package did not pass the n8n community scanner.' >&2
+            exit 1
+          fi

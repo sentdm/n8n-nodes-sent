@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # `n8n-node build` runs tsc, so this is also the type-check.
+      - name: Build
+        run: npm run build
+
+      - name: Inspect package
+        run: npm pack --dry-run
+
+      - name: Check tracked files for unsafe repository artifacts
+        shell: bash
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)|(^|/)coverage/|(^|/)node_modules/|(^|/)dist/' ; then
+            echo 'Tracked local/generated artifact detected.' >&2
+            exit 1
+          fi
+          # Keep the pathspec as an explicit allowlist of the sources that ship to npm.
+          # An exclusion pathspec such as ':!docs/**' makes git grep scan this workflow
+          # file, whose own pattern list then matches itself and fails every run.
+          if git grep -nE 'NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized[[:space:]]*:[[:space:]]*false|process\.env|child_process|eval\(|<script' -- credentials nodes icons package.json ; then
+            echo 'Potentially unsafe runtime construct detected.' >&2
+            exit 1
+          fi
+
+      - name: Scanner mode notice
+        run: echo 'The official scanner downloads a published npm package; the exact version is scanned after publication in publish.yml.'

@@ -1,0 +1,9 @@
+{
+  "name": "Sent - Inbound Message Trigger",
+  "nodes": [
+    { "parameters": { "eventTypes": ["message"], "messageSubtypes": ["received"], "options": { "retryCount": 3, "timeoutSeconds": 30 } }, "id": "trigger-6", "name": "On Inbound Sent Message", "type": "@sentdm/n8n-nodes-sent.sentTrigger", "typeVersion": 1, "position": [0, 0] },
+    { "parameters": { "assignments": { "assignments": [{ "id": "msg", "name": "messageId", "value": "={{ $json.payload.message_id }}", "type": "string" }, { "id": "body", "name": "text", "value": "={{ $json.payload.text }}", "type": "string" }, { "id": "key", "name": "idempotencyKey", "value": "={{ $json.idempotencyKey }}", "type": "string" }] }, "options": {} }, "id": "set-6", "name": "Extract Verified Fields", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [240, 0] }
+  ],
+  "connections": { "On Inbound Sent Message": { "main": [[{ "node": "Extract Verified Fields", "type": "main", "index": 0 }]] } },
+  "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
+}

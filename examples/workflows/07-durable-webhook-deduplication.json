@@ -1,0 +1,105 @@
+{
+  "name": "Sent - Durable Webhook Deduplication (Postgres)",
+  "nodes": [
+    {
+      "parameters": {
+        "eventTypes": [
+          "message"
+        ],
+        "messageSubtypes": [],
+        "options": {
+          "retryCount": 3,
+          "timeoutSeconds": 30
+        }
+      },
+      "id": "trigger-9",
+      "name": "Sent Verified Event",
+      "type": "@sentdm/n8n-nodes-sent.sentTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sent_webhook_events (idempotency_key, received_at)\nVALUES ($1, NOW())\nON CONFLICT (idempotency_key) DO NOTHING\nRETURNING idempotency_key;",
+        "options": {
+          "queryReplacement": "={{[$json.idempotencyKey]}}"
+        }
+      },
+      "id": "postgres-9",
+      "name": "Claim Event Once",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "claimed",
+              "leftValue": "={{$json.idempotency_key}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-9",
+      "name": "First Delivery?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Sent Verified Event": {
+      "main": [
+        [
+          {
+            "node": "Claim Event Once",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Event Once": {
+      "main": [
+        [
+          {
+            "node": "First Delivery?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -1,0 +1,18 @@
+{
+	"node": "@sentdm/n8n-nodes-sent.sent",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication", "Marketing"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://docs.sent.dm/reference/api/authentication"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/sentdm/n8n-nodes-sent#readme"
+			}
+		]
+	}
+}
