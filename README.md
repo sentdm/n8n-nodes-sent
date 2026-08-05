@@ -97,7 +97,7 @@ Seven importable workflows live in [`examples/workflows`](https://github.com/sen
 | --- | --- | --- |
 | 01 | Send a Text Message | `Message → Send` |
 | 02 | Send a Template Message | `Message → Send` with variables |
-| 03 | Validate a Number Before Sending | `Number Lookup → Lookup` gating a send |
+| 03 | Validate a Number Before Sending | `Phone Number → Lookup` gating a send |
 | 04 | Track Delivery Status | `Message → Get` and `Get Activities` |
 | 05 | Message Contacts in Batches | `Contact → Get Many` through Loop Over Items |
 | 06 | Inbound Message Trigger | `Sent Trigger` |
