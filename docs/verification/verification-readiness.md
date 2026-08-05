@@ -11,7 +11,7 @@ Environment: Node.js `v24.6.0`, npm `11.17.0`, pnpm `11.7.0`, `@n8n/node-cli/0.4
 | `pnpm install` | 0 | Lockfile satisfied; 824 resolved dependencies (153 prod, 669 dev, 95 optional, 69 peer) |
 | `pnpm run lint` | 0 | `n8n-node lint` 0.42.0, no errors or warnings |
 | `pnpm exec tsc --noEmit` | 0 | No type errors under `strict` + `noUnusedLocals` |
-| `pnpm test` | 0 | 9 files / **157 tests** passed |
+| `pnpm test` | 0 | 10 files / **193 tests** passed |
 | `pnpm run build` | 0 | TypeScript build and static-file copy successful |
 | `npm pack --dry-run` | 0 | 27 files, 20.9 kB packed / 87.8 kB unpacked |
 | `npm audit --omit=dev` | 0 | **0 vulnerabilities** |

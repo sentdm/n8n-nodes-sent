@@ -13,6 +13,6 @@ Initial release.
 - Sent Trigger for `message.*` events, with webhook registration, raw-body HMAC-SHA256 verification, a ±300-second replay window, and deregistration on deactivation.
 - Shared typed transport with page-number pagination, redacted error reporting, sandbox, and idempotency support.
 - Square Sent brand icons for the light and dark n8n themes, on both nodes and the credential.
-- 157 unit tests, importable example workflows, CI quality gates, and a provenance publishing workflow.
+- 193 unit tests, importable example workflows, CI quality gates, and a provenance publishing workflow.
 
 [0.1.0]: https://github.com/sentdm/n8n-nodes-sent/releases/tag/0.1.0

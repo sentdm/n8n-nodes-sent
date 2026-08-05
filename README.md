@@ -79,7 +79,7 @@ The expected header value is `v1,<base64 digest>`. Comparisons use Node.js `timi
 
 **Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret, and rotate it from the Sent console if either is exposed. Verification fails closed: without a stored secret every delivery is rejected with 401.
 
-Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and an idempotency key. The key is the resource ID plus its transition where the payload carries one, and otherwise a SHA-256 hash of the raw body; both are stable across Sent's redeliveries of the same event. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/09-durable-webhook-deduplication.json).
+Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and an idempotency key. The key is the resource ID plus its transition where the payload carries one, and otherwise a SHA-256 hash of the raw body; both are stable across Sent's redeliveries of the same event. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/07-durable-webhook-deduplication.json).
 
 ### Local webhook testing
 
@@ -91,7 +91,19 @@ Sent errors are surfaced with the HTTP status, safe Sent code/message, request I
 
 ## Example workflows
 
-Importable JSON examples live in [`examples/workflows`](https://github.com/sentdm/n8n-nodes-sent/tree/main/examples/workflows): a template send, an inbound-message trigger, and durable webhook deduplication. They contain placeholders only—no credential IDs, secrets, or real phone numbers.
+Seven importable workflows live in [`examples/workflows`](https://github.com/sentdm/n8n-nodes-sent/tree/main/examples/workflows), with an [index](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/README.md) mapping each one to the operations it demonstrates:
+
+| # | Workflow | Shows |
+| --- | --- | --- |
+| 01 | Send a Text Message | `Message → Send` |
+| 02 | Send a Template Message | `Message → Send` with variables |
+| 03 | Validate a Number Before Sending | `Number Lookup → Lookup` gating a send |
+| 04 | Track Delivery Status | `Message → Get` and `Get Activities` |
+| 05 | Message Contacts in Batches | `Contact → Get Contacts` through Loop Over Items |
+| 06 | Inbound Message Trigger | `Sent Trigger` |
+| 07 | Durable Webhook Deduplication | `Sent Trigger` with a Postgres `ON CONFLICT` claim |
+
+They contain placeholders only — no credential IDs, no secrets, and phone numbers drawn from ranges reserved for fiction. Every send sets **Sandbox**, so importing and running one cannot deliver a real message. `test/examples.test.ts` asserts all of that, and fails if an example drifts from the node's actual parameters.
 
 ## Known limitations
 
