@@ -18,16 +18,17 @@ const operations: Record<
 			description: 'Retrieve the account the API key belongs to',
 		}],
 	contact: [
-		// The UX guidelines allow dropping "Many" ("Get Many Rows" can be "Get Rows"), so
-		// the two stay distinct operations without the redundant word.
+		// `name` shows under the Resource selector, so it must not repeat the resource
+		// (ux-guidelines "Don't repeat the resource"). `action` shows in the node picker
+		// with no resource context, where repeating it is explicitly encouraged.
 		{
-			name: 'Get Contact',
+			name: 'Get',
 			value: 'get',
 			action: 'Get contact',
 			description: 'Retrieve a single contact by ID',
 		},
 		{
-			name: 'Get Contacts',
+			name: 'Get Many',
 			value: 'getMany',
 			action: 'Get contacts',
 			description: 'Retrieve contacts, optionally filtered by channel, phone or search term',
@@ -37,7 +38,7 @@ const operations: Record<
 		{
 			name: 'Get',
 			value: 'get',
-			action: 'Get a message',
+			action: 'Get message',
 			description: 'Retrieve a single message and its current status',
 		},
 		{
@@ -49,7 +50,7 @@ const operations: Record<
 		{
 			name: 'Send',
 			value: 'send',
-			action: 'Send a message',
+			action: 'Send message',
 			description: 'Send text or a template over SMS, WhatsApp or RCS',
 		},
 	],
@@ -57,7 +58,7 @@ const operations: Record<
 		{
 			name: 'Lookup',
 			value: 'lookup',
-			action: 'Look up a phone number',
+			action: 'Look up phone number',
 			description: 'Check whether a phone number is valid and which channels can reach it',
 		},
 	],

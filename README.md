@@ -33,7 +33,7 @@ See Sent's [authentication documentation](https://docs.sent.dm/reference/api/aut
 | --- | --- |
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
-| Contact | Get Contact, Get Contacts |
+| Contact | Get, Get Many |
 | Number Lookup | Lookup |
 
 The endpoint-by-endpoint matrix is in [API coverage](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/api-coverage.md).
@@ -59,7 +59,7 @@ Sent currently documents no scheduling field in the v3 send-message request, so 
 
 ## Pagination
 
-**Contact → Get Contacts** exposes **Return All** and **Limit**. The paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard.
+**Contact → Get Many** exposes **Return All** and **Limit**. The paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard.
 
 ## Sent Trigger
 
@@ -99,7 +99,7 @@ Seven importable workflows live in [`examples/workflows`](https://github.com/sen
 | 02 | Send a Template Message | `Message → Send` with variables |
 | 03 | Validate a Number Before Sending | `Number Lookup → Lookup` gating a send |
 | 04 | Track Delivery Status | `Message → Get` and `Get Activities` |
-| 05 | Message Contacts in Batches | `Contact → Get Contacts` through Loop Over Items |
+| 05 | Message Contacts in Batches | `Contact → Get Many` through Loop Over Items |
 | 06 | Inbound Message Trigger | `Sent Trigger` |
 | 07 | Durable Webhook Deduplication | `Sent Trigger` with a Postgres `ON CONFLICT` claim |
 

@@ -10,8 +10,8 @@ Every operation below has a matching row in the `matrix` table in `test/operatio
 | 2 | Message | POST | `/v3/messages` | Message / Send | Matrix + direct | Text/template; Sent/SMS/WhatsApp/RCS; sandbox; idempotency |
 | 3 | Message | GET | `/v3/messages/{messageId}` | Message / Get | Matrix + execute | Exact ID |
 | 4 | Message | GET | `/v3/messages/{messageId}/activities` | Message / Get Activities | Matrix | Exact ID |
-| 5 | Contact | GET | `/v3/contacts/{contactId}` | Contact / Get Contact | Matrix | — |
-| 6 | Contact | GET | `/v3/contacts` | Contact / Get Contacts | Matrix + pagination | Filters, Return All, Limit |
+| 5 | Contact | GET | `/v3/contacts/{contactId}` | Contact / Get | Matrix | — |
+| 6 | Contact | GET | `/v3/contacts` | Contact / Get Many | Matrix + pagination | Filters, Return All, Limit |
 | 7 | Number Lookup | GET | `/v3/numbers/lookup/{phoneNumber}` | Number Lookup / Lookup | Matrix | International number input |
 
 ## Deliberately excluded operations

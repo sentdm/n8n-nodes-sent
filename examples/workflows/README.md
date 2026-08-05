@@ -15,13 +15,13 @@ values, and turn Sandbox off when you are ready to send for real.
 | 02 | [Send a Template Message](02-send-template-message.json) | `Message → Send` | Sending an approved template with variables to several recipients |
 | 03 | [Validate a Number Before Sending](03-validate-number-before-sending.json) | `Number Lookup → Lookup`, `Message → Send` | Branching on a lookup result so unreachable numbers are skipped instead of billed |
 | 04 | [Track Delivery Status](04-track-delivery-status.json) | `Message → Get`, `Message → Get Activities` | Reading a message and then its per-channel delivery timeline |
-| 05 | [Message Contacts in Batches](05-message-contacts-in-batches.json) | `Contact → Get Contacts`, `Message → Send` | Paginated contact retrieval fed through **Loop Over Items** so large lists send in controlled batches |
+| 05 | [Message Contacts in Batches](05-message-contacts-in-batches.json) | `Contact → Get Many`, `Message → Send` | Paginated contact retrieval fed through **Loop Over Items** so large lists send in controlled batches |
 | 06 | [Inbound Message Trigger](06-inbound-message-trigger.json) | `Sent Trigger` | Starting a workflow from a signature-verified inbound message |
 | 07 | [Durable Webhook Deduplication](07-durable-webhook-deduplication.json) | `Sent Trigger` | Using the trigger's redelivery-stable `idempotencyKey` with a Postgres `ON CONFLICT` claim so a Sent retry runs the workflow body once |
 
 ## Operations without a dedicated example
 
-`Account → Get` and `Contact → Get Contact` are single-call operations that take no configuration
+`Account → Get` and `Contact → Get` are single-call operations that take no configuration
 beyond an ID, so a workflow file for them would add nothing over the node's own panel. `Account →
 Get` is also what the credential's **Test** button calls, which makes it the quickest way to confirm
 an API key works.
