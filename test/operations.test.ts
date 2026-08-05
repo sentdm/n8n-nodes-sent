@@ -52,12 +52,6 @@ const matrix: Row[] = [
 	{ resource: 'campaign', operation: 'getMany', parameters: { profileId: 'p1' }, expected: { method: 'GET', path: '/v3/profiles/p1/campaigns', collectionKey: 'campaigns' } },
 	{ resource: 'campaign', operation: 'update', parameters: { profileId: 'p1', campaignId: 'cmp1', campaignJson: '{"name":"c"}' }, expected: { method: 'PUT', path: '/v3/profiles/p1/campaigns/cmp1' } },
 
-	{ resource: 'profile', operation: 'complete', parameters: { profileId: 'p1', webhookUrl: 'https://n8n.example.com/done' }, expected: { method: 'POST', path: '/v3/profiles/p1/complete' } },
-	{ resource: 'profile', operation: 'create', parameters: { name: 'Acme', additionalFieldsJson: '{}' }, expected: { method: 'POST', path: '/v3/profiles' } },
-	{ resource: 'profile', operation: 'delete', parameters: { profileId: 'p1' }, expected: { method: 'DELETE', path: '/v3/profiles/p1' } },
-	{ resource: 'profile', operation: 'get', parameters: { profileId: 'p1' }, expected: { method: 'GET', path: '/v3/profiles/p1' } },
-	{ resource: 'profile', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/profiles', collectionKey: 'profiles' } },
-	{ resource: 'profile', operation: 'update', parameters: { profileId: 'p1', name: 'Acme', additionalFieldsJson: '{}' }, expected: { method: 'PATCH', path: '/v3/profiles/p1' } },
 
 	{ resource: 'webhook', operation: 'create', parameters: webhookFields, expected: { method: 'POST', path: '/v3/webhooks' } },
 	{ resource: 'webhook', operation: 'delete', parameters: { webhookId: 'w1' }, expected: { method: 'DELETE', path: '/v3/webhooks/w1' } },
@@ -124,10 +118,16 @@ describe('Sent operation matrix', () => {
 		['user', 'invite'],
 		['user', 'remove'],
 		['user', 'updateRole'],
+		['profile', 'complete'],
+		['profile', 'create'],
+		['profile', 'delete'],
+		['profile', 'get'],
+		['profile', 'getMany'],
+		['profile', 'update'],
 	])('rejects the removed operation %s.%s', (resource, operation) => {
 		expect(() =>
 			buildOperation(
-				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1', templateId: 't1', userId: 'u1' }) as never,
+				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1', templateId: 't1', userId: 'u1', profileId: 'p1' }) as never,
 				0,
 				resource,
 				operation,
@@ -151,25 +151,15 @@ describe('Sent operation request bodies', () => {
 
 	it('adds sandbox to the body of a mutation that supports it', () => {
 		const request = buildOperation(
-			executeContext({ profileId: 'p1', requestOptions: { sandbox: true } }) as never,
+			executeContext({ profileId: 'p1', campaignId: 'cmp1', requestOptions: { sandbox: true } }) as never,
 			0,
-			'profile',
+			'campaign',
 			'delete',
 		);
 
 		expect(request.body).toEqual({ sandbox: true });
 	});
 
-	it('refuses an empty Profile Update rather than sending an empty PATCH', () => {
-		expect(() =>
-			buildOperation(
-				executeContext({ profileId: 'p1', name: '', additionalFieldsJson: '{}' }) as never,
-				0,
-				'profile',
-				'update',
-			),
-		).toThrow(/at least one field to change/);
-	});
 
 	it('accepts an object-valued expression result for a JSON parameter', () => {
 		const request = buildOperation(
@@ -255,7 +245,7 @@ describe('Sent operation request bodies', () => {
 			const byField: Record<string, [string, string]> = {
 				contactId: ['contact', 'get'],
 				messageId: ['message', 'get'],
-				profileId: ['profile', 'get'],
+				profileId: ['campaign', 'getMany'],
 				webhookId: ['webhook', 'get'],
 			};
 			const [resource, operation] = byField[field];

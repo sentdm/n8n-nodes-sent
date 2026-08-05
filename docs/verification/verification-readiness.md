@@ -11,7 +11,7 @@ Environment: Node.js `v24.6.0`, npm `11.17.0`, pnpm `11.7.0`, `@n8n/node-cli/0.4
 | `pnpm install` | 0 | Lockfile satisfied; 824 resolved dependencies (153 prod, 669 dev, 95 optional, 69 peer) |
 | `pnpm run lint` | 0 | `n8n-node lint` 0.42.0, no errors or warnings |
 | `pnpm exec tsc --noEmit` | 0 | No type errors under `strict` + `noUnusedLocals` |
-| `pnpm test` | 0 | 8 files / **147 tests** passed |
+| `pnpm test` | 0 | 8 files / **146 tests** passed |
 | `pnpm run build` | 0 | TypeScript build and static-file copy successful |
 | `npm pack --dry-run` | 0 | 27 files, 20.9 kB packed / 87.8 kB unpacked |
 | `npm audit --omit=dev` | 0 | **0 vulnerabilities** |
@@ -44,7 +44,7 @@ No tests, examples, docs, plans, CI workflows, or source `.ts` files are include
 | Clean install | `package-lock.json` committed; both workflows use `npm ci` | Pass | None |
 | English UI and documentation | `n8n-node lint` plus editorial review | Pass | None |
 | API-key credential | `credentials/SentApi.credentials.ts`: password field, `x-api-key`, `GET /v3/me` test, themed icon | Pass structurally | Live valid/invalid-key test |
-| Stable Sent v3 coverage | 27 of the 43 documented operations, each asserted in `test/operations.test.ts`; 16 documented exclusions | Pass | Live representative API smoke tests |
+| Stable Sent v3 coverage | 21 of the 43 documented operations, each asserted in `test/operations.test.ts`; 22 documented exclusions | Pass | Live representative API smoke tests |
 | Trigger registers a real webhook | `description.webhooks` carries no `restartWebhook`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Live activation against a public HTTPS URL |
 | Trigger is not an AI tool | `usableAsTool` is `undefined`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Confirm no "Sent Trigger Tool" appears in the AI Tools panel |
 | Raw-body signature security | Deterministic HMAC, replay window, body-mutation and rejection tests; a rejected delivery produces no execution | Pass | Live Sent delivery and a forged-body 401 |

@@ -34,7 +34,6 @@ See Sent's [authentication documentation](https://docs.sent.dm/reference/api/aut
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
 | Contact | Get, Get Many |
-| Profile | Create, Delete, Get, Get Many, Update, Complete Setup |
 | Brand Campaign | Create, Delete, Get Many, Update |
 | Webhook | Create, Delete, Get, Get Many, Update, Toggle Status, Rotate Signing Secret, Test, Get Events, Get Event Types |
 | Number Lookup | Lookup |
@@ -54,7 +53,7 @@ The channel choices follow Sent's documented semantics:
 
 Sent currently documents no scheduling field in the v3 send-message request, so this package does not invent one.
 
-**Template Parameters**, **Campaign JSON**, **Event Filters JSON**, and **Additional Fields JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
+**Template Parameters**, **Campaign JSON**, and **Event Filters JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
 
 ## Sandbox and idempotency
 
@@ -62,7 +61,7 @@ Mutations share one **Options** collection carrying **Sandbox** and **Idempotenc
 
 ## Pagination
 
-Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. Profile and campaign list endpoints currently return their complete documented collection without pagination parameters.
+Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. The campaign list endpoint currently returns its complete documented collection without pagination parameters.
 
 ## Sent Trigger
 
@@ -103,7 +102,8 @@ Importable JSON examples live in [`examples/workflows`](https://github.com/sentd
 - Sent's documented v3 send schema has no scheduling input.
 - Some complex campaign, profile, template, and webhook filter objects use validated advanced JSON fields to preserve the current documented schema without inventing UI fields.
 - Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
-- The node is scoped to messaging and delivery. Template authoring and User/seat administration are console tasks and are not exposed as actions, and neither are the Conversation endpoints or contact create/update/delete/message-summary. `Message → Send` still selects an existing template, and the searchable picker still lists them.
+- The node is scoped to messaging and delivery. Template authoring, User/seat administration and brand-profile onboarding are console tasks and are not exposed as actions, and neither are the Conversation endpoints or contact create/update/delete/message-summary. `Message → Send` still selects an existing template, and the searchable picker still lists them.
+- **Brand Campaign** operations still require a **Profile ID**, because Sent routes them under `/v3/profiles/{profileId}/campaigns`. Copy that ID from the Sent console; the node no longer lists profiles.
 
 ## Development and testing
 

@@ -150,34 +150,6 @@ export function buildOperation(
 		if (operation === 'update') return baseRequest(context, itemIndex, 'PUT', `${root}/${identifier(context, itemIndex, 'campaignId')}`, { campaign });
 	}
 
-	if (resource === 'profile') {
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/profiles'), collectionKey: 'profiles' };
-		if (operation === 'create') {
-			return baseRequest(context, itemIndex, 'POST', '/v3/profiles', {
-				name: parameter(context, 'name', itemIndex),
-				...jsonParameter(context, 'additionalFieldsJson', itemIndex, 'Additional Fields JSON'),
-			});
-		}
-		const profileId = identifier(context, itemIndex, 'profileId');
-		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `/v3/profiles/${profileId}`, {});
-		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/profiles/${profileId}`);
-		if (operation === 'complete') return baseRequest(context, itemIndex, 'POST', `/v3/profiles/${profileId}/complete`, { webHookUrl: parameter(context, 'webhookUrl', itemIndex) });
-		if (operation === 'update') {
-			const fields = compactObject({
-				name: parameter(context, 'name', itemIndex),
-				...jsonParameter(context, 'additionalFieldsJson', itemIndex, 'Additional Fields JSON'),
-			});
-			if (Object.keys(fields).length === 0) {
-				throw new NodeOperationError(
-					context.getNode(),
-					'Profile Update needs at least one field to change. Set Name, or add fields to Additional Fields JSON.',
-					{ itemIndex },
-				);
-			}
-			return baseRequest(context, itemIndex, 'PATCH', `/v3/profiles/${profileId}`, fields);
-		}
-	}
-
 	if (resource === 'webhook') {
 		if (operation === 'getEventTypes') return baseRequest(context, itemIndex, 'GET', '/v3/webhooks/event-types');
 		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/webhooks'), query: filters(context, itemIndex), collectionKey: 'webhooks', paginated: true };

@@ -35,7 +35,7 @@ describe('Sent action parameter schema', () => {
 	it.each([
 		['message', 'send'],
 		['campaign', 'delete'],
-		['profile', 'update'],
+		['campaign', 'update'],
 		['campaign', 'create'],
 		['webhook', 'rotateSecret'],
 	])('displays the shared Options collection for %s.%s', (resource, operation) => {

@@ -6,7 +6,6 @@ const resourceOptions = [
 	{ name: 'Contact', value: 'contact' },
 	{ name: 'Message', value: 'message' },
 	{ name: 'Number Lookup', value: 'numberLookup' },
-	{ name: 'Profile', value: 'profile' },
 	{ name: 'Webhook', value: 'webhook' },
 ];
 
@@ -28,14 +27,6 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 		{ name: 'Send', value: 'send', action: 'Send a message' },
 	],
 	numberLookup: [{ name: 'Lookup', value: 'lookup', action: 'Look up a phone number' }],
-	profile: [
-		{ name: 'Complete Setup', value: 'complete', action: 'Complete profile setup' },
-		{ name: 'Create', value: 'create', action: 'Create a profile' },
-		{ name: 'Delete', value: 'delete', action: 'Delete a profile' },
-		{ name: 'Get', value: 'get', action: 'Get a profile' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many profiles' },
-		{ name: 'Update', value: 'update', action: 'Update a profile' },
-	],
 	webhook: [
 		{ name: 'Create', value: 'create', action: 'Create a webhook' },
 		{ name: 'Delete', value: 'delete', action: 'Delete a webhook' },
@@ -83,14 +74,6 @@ const idFields: INodeProperties[] = [
 		required: true,
 		default: '',
 		displayOptions: { show: { resource: ['message'], operation: ['get', 'getActivities'] } },
-	},
-	{
-		displayName: 'Profile ID',
-		name: 'profileId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['profile'], operation: ['complete', 'delete', 'get', 'update'] } },
 	},
 	{
 		displayName: 'Profile ID',
@@ -247,27 +230,12 @@ export const sentProperties: INodeProperties[] = [
 		displayOptions: { show: { resource: ['message'], operation: ['send'], messageType: ['text'] } },
 	},
 	{
-		displayName: 'Name',
-		name: 'name',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { resource: ['profile'], operation: ['create', 'update'] } },
-	},
-	{
 		displayName: 'Campaign JSON',
 		name: 'campaignJson',
 		type: 'json',
 		default: '{}',
 		displayOptions: { show: { resource: ['campaign'], operation: ['create', 'update'] } },
 		description: 'Campaign object following the Sent brand campaign schema',
-	},
-	{
-		displayName: 'Webhook URL',
-		name: 'webhookUrl',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { resource: ['profile'], operation: ['complete'] } },
-		description: 'Public callback URL that receives the profile completion result',
 	},
 	{
 		displayName: 'Display Name',
@@ -334,14 +302,6 @@ export const sentProperties: INodeProperties[] = [
 		default: true,
 		displayOptions: { show: { resource: ['webhook'], operation: ['toggleStatus'] } },
 	},
-	{
-		displayName: 'Additional Fields JSON',
-		name: 'additionalFieldsJson',
-		type: 'json',
-		default: '{}',
-		displayOptions: { show: { resource: ['profile'], operation: ['create', 'update'] } },
-		description: 'Additional documented profile fields, including nested billing and brand objects',
-	},
 	...paginationFields,
 	{
 		displayName: 'Filters',
@@ -389,7 +349,7 @@ export const sentProperties: INodeProperties[] = [
 		default: {},
 		displayOptions: {
 			show: {
-				operation: ['complete', 'create', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update'],
+				operation: ['create', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update'],
 			},
 		},
 		options: mutationOptions,
@@ -400,7 +360,7 @@ export const sentProperties: INodeProperties[] = [
 		type: 'collection',
 		placeholder: 'Add Option',
 		default: {},
-		displayOptions: { show: { resource: ['campaign', 'profile'], operation: ['delete'] } },
+		displayOptions: { show: { resource: ['campaign'], operation: ['delete'] } },
 		options: mutationOptions,
 	},
 ];

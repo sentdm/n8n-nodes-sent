@@ -18,7 +18,7 @@ This is a human handoff document, not evidence of publication or verification.
 
 ## Node operations summary
 
-The `Sent` action node exposes 27 operations across Account, Message, Contact, Profile, Brand Campaign, Webhook, and Number Lookup. Conversation, Template and User resources, and contact create/update/delete/message-summary, are deliberately excluded; see [API coverage](api-coverage.md) for the reasons. The `Sent Trigger` registers verified `message.*` webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a redelivery-stable deduplication key.
+The `Sent` action node exposes 21 operations across Account, Message, Contact, Brand Campaign, Webhook, and Number Lookup. The Conversation, Template, User and Profile resources, and contact create/update/delete/message-summary, are deliberately excluded; see [API coverage](api-coverage.md) for the reasons. The `Sent Trigger` registers verified `message.*` webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a redelivery-stable deduplication key.
 
 ## Known limitations
 

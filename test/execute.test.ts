@@ -71,11 +71,11 @@ describe('Sent.execute', () => {
 
 	it('unwraps a collection returned by a non-paginated list operation', async () => {
 		const { items } = await execute({
-			items: [{ resource: 'profile', operation: 'getMany' }],
-			responses: [ok({ success: true, data: { profiles: [{ id: 'p1' }, { id: 'p2' }] } })],
+			items: [{ resource: 'campaign', operation: 'getMany', profileId: 'p1' }],
+			responses: [ok({ success: true, data: { campaigns: [{ id: 'c1' }, { id: 'c2' }] } })],
 		});
 
-		expect(items.map((item) => item.json)).toEqual([{ id: 'p1' }, { id: 'p2' }]);
+		expect(items.map((item) => item.json)).toEqual([{ id: 'c1' }, { id: 'c2' }]);
 		expect(items.every((item) => item.pairedItem)).toBe(true);
 	});
 
