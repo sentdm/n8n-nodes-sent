@@ -13,12 +13,12 @@ Environment: Node.js `v24.6.0`, npm `11.17.0`, pnpm `11.7.0`, `@n8n/node-cli/0.4
 | `pnpm exec tsc --noEmit` | 0 | No type errors under `strict` + `noUnusedLocals` |
 | `pnpm test` | 0 | 10 files / **193 tests** passed |
 | `pnpm run build` | 0 | TypeScript build and static-file copy successful |
-| `npm pack --dry-run` | 0 | 27 files, 20.9 kB packed / 87.8 kB unpacked |
+| `npm pack --dry-run` | 0 | 27 files, 18.2 kB packed / 67.2 kB unpacked |
 | `npm audit --omit=dev` | 0 | **0 vulnerabilities** |
 | `npm audit` | 1 | 6 moderate, 2 high — all in development-only CLI/release tooling; see below |
 | CI gate: tracked-artifact grep | 1 (no match) | No tracked `.env`, `coverage/`, `node_modules/`, or `dist/` |
 | CI gate: unsafe-construct grep | 1 (no match) | No `NODE_TLS_REJECT_UNAUTHORIZED`, `rejectUnauthorized: false`, `process.env`, `child_process`, `eval(`, or `<script` across `credentials`, `nodes`, `icons`, `package.json` |
-| JSON/YAML parse check | 0 | 3 example workflows, 2 node codex files, `package.json`, and 2 Actions workflows all parse |
+| JSON/YAML parse check | 0 | 7 example workflows, 2 node codex files, `package.json`, and 2 Actions workflows all parse. `test/examples.test.ts` additionally checks every example against the node's declared parameters |
 | `curl -IL https://github.com/sentdm/n8n-nodes-sent` | — | **404** — the repository is not public yet |
 | `npm view @sentdm/n8n-nodes-sent` | — | **E404** — the package is not published yet |
 

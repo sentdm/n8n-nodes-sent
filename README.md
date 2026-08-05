@@ -59,7 +59,7 @@ Sent currently documents no scheduling field in the v3 send-message request, so 
 
 ## Pagination
 
-**Contact → Get Many** exposes **Return All** and **Limit**. The paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard.
+**Contact → Get Contacts** exposes **Return All** and **Limit**. The paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard.
 
 ## Sent Trigger
 

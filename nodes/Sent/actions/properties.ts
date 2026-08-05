@@ -7,20 +7,60 @@ const resourceOptions = [
 	{ name: 'Number Lookup', value: 'numberLookup' },
 ];
 
-const operations: Record<string, Array<{ name: string; value: string; action: string }>> = {
-	account: [{ name: 'Get', value: 'get', action: 'Get authenticated account' }],
+const operations: Record<
+	string,
+	Array<{ name: string; value: string; action: string; description: string }>
+> = {
+	account: [{
+			name: 'Get',
+			value: 'get',
+			action: 'Get authenticated account',
+			description: 'Retrieve the account the API key belongs to',
+		}],
 	contact: [
 		// The UX guidelines allow dropping "Many" ("Get Many Rows" can be "Get Rows"), so
 		// the two stay distinct operations without the redundant word.
-		{ name: 'Get Contact', value: 'get', action: 'Get contact' },
-		{ name: 'Get Contacts', value: 'getMany', action: 'Get contacts' },
+		{
+			name: 'Get Contact',
+			value: 'get',
+			action: 'Get contact',
+			description: 'Retrieve a single contact by ID',
+		},
+		{
+			name: 'Get Contacts',
+			value: 'getMany',
+			action: 'Get contacts',
+			description: 'Retrieve contacts, optionally filtered by channel, phone or search term',
+		},
 	],
 	message: [
-		{ name: 'Get', value: 'get', action: 'Get a message' },
-		{ name: 'Get Activities', value: 'getActivities', action: 'Get message activities' },
-		{ name: 'Send', value: 'send', action: 'Send a message' },
+		{
+			name: 'Get',
+			value: 'get',
+			action: 'Get a message',
+			description: 'Retrieve a single message and its current status',
+		},
+		{
+			name: 'Get Activities',
+			value: 'getActivities',
+			action: 'Get message activities',
+			description: 'Retrieve the delivery timeline for a message',
+		},
+		{
+			name: 'Send',
+			value: 'send',
+			action: 'Send a message',
+			description: 'Send text or a template over SMS, WhatsApp or RCS',
+		},
 	],
-	numberLookup: [{ name: 'Lookup', value: 'lookup', action: 'Look up a phone number' }],
+	numberLookup: [
+		{
+			name: 'Lookup',
+			value: 'lookup',
+			action: 'Look up a phone number',
+			description: 'Check whether a phone number is valid and which channels can reach it',
+		},
+	],
 };
 
 const mutationOptions: INodeProperties[] = [
@@ -38,7 +78,7 @@ const mutationOptions: INodeProperties[] = [
 		type: 'boolean',
 		default: false,
 		description:
-			'Whether Sent should validate and simulate this supported mutation without side effects',
+			'Whether Sent should validate and simulate the send without delivering anything or spending credit',
 	},
 ];
 

@@ -1,5 +1,11 @@
 # Pre-submission remediation — `@sentdm/n8n-nodes-sent`
 
+> **Historical record — fully resolved and superseded.** This is the audit plan that drove the
+> 2026-08-05 remediation. Every blocker described below (including the dead trigger and the failing
+> CI grep) was fixed and verified in that work, and the node surface has since been trimmed well
+> beyond what this document describes. It is kept only as an audit trail. For the package as it
+> actually stands, read `README.md` and `docs/verification/`.
+
 ## Context
 
 `@sentdm/n8n-nodes-sent` is a complete but **unpublished** n8n community node package (a `Sent`

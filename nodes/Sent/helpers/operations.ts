@@ -1,6 +1,7 @@
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
+import { sentProperties } from '../actions/properties';
 import { compactObject, parseJsonInput } from '../transport';
 import type { SentMessageRequest, SentRequestOptions } from '../types';
 
@@ -57,9 +58,23 @@ function baseRequest(
 	};
 }
 
+// Derived from the UI definitions so an error can never name a field the user cannot see,
+// and can never drift from the label shown next to the empty input.
+const labelByParameter = new Map(
+	sentProperties
+		.filter((property) => property.required === true)
+		.map((property) => [property.name, property.displayName]),
+);
+
 function identifier(context: IExecuteFunctions, itemIndex: number, name: string): string {
 	const value = parameter(context, name, itemIndex).trim();
-	if (!value) throw new NodeOperationError(context.getNode(), `${name} is required`, { itemIndex });
+	if (!value) {
+		throw new NodeOperationError(
+			context.getNode(),
+			`${labelByParameter.get(name) ?? name} is required`,
+			{ itemIndex },
+		);
+	}
 	return encodeURIComponent(value);
 }
 

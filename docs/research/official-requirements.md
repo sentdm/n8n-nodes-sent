@@ -1,5 +1,11 @@
 # Official requirements research
 
+> **Point-in-time research snapshot, 2026-08-04.** Toolchain versions and the node surface recorded
+> below were true when the package was first built. The node has since been trimmed to 4 resources /
+> 7 operations, and the licence holder and contacts are confirmed. For the package as it stands, read
+> `../verification/verification-readiness.md`. This file is kept for its record of *which official
+> sources were consulted*, not as a current status report.
+
 Research date: **2026-08-04** (Europe/Belgrade).
 
 ## Toolchain observed
@@ -38,7 +44,7 @@ Repository-local help was read for:
 | Use official scaffold/CLI | [Build an n8n node](https://docs.n8n.io/connect/create-nodes/build-your-node/using-the-n8n-node-tool) | Scaffold created via `npm create @n8n/node`; local CLI pinned | Met |
 | Node.js 22+ | [Official starter](https://github.com/n8n-io/n8n-nodes-starter) | Node `v24.9.0`, `engines.node >=22`, CI Node 22 | Met |
 | Local CLI scripts | Official starter/package scripts | `dev`, `lint`, `lint:fix`, `build`, `release`; direct use via `npx` | Met |
-| MIT license | n8n verification guidance | `license: MIT`, `LICENSE.md`; holder pending confirmation | Partial—human legal confirmation |
+| MIT license | n8n verification guidance | `license: MIT`, `LICENSE.md`, holder Sent.dm | Met |
 | No runtime dependencies | n8n verification guidance | No `dependencies`; only dev/peer dependencies | Met |
 | Public source and exact npm metadata | [Creator Portal](https://creators.n8n.io/nodes) | Metadata targets `https://github.com/sentdm/n8n-nodes-sent`; public existence pending | External action |
 | GitHub Actions publication/provenance | Current starter publication workflow | `.github/workflows/publish.yml`, `id-token: write`, Trusted Publisher | Configured, not executed |

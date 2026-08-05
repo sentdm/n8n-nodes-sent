@@ -27,7 +27,7 @@ The `Sent` action node exposes 7 operations across Account, Message, Contact, an
 - Live Sent credential and webhook tests require a user-authorized API key and a public HTTPS endpoint.
 - Sent's current message request schema does not document scheduling.
 - Public HTTPS is required for trigger activation.
-- Advanced structured API objects are entered as validated JSON where a stable high-quality UI cannot safely infer undocumented fields.
+- **Template Parameters** is a JSON field, because template variables are defined by the template rather than by a fixed schema. It accepts literal JSON or an expression that resolves to an object.
 
 ## Public Creator Portal inspection
 

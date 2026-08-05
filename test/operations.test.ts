@@ -230,17 +230,15 @@ describe('Sent operation request bodies', () => {
 		expect(request.path).toBe('/v3/contacts/a%2Fb%3Fc');
 	});
 
-	it.each(['contactId', 'messageId'])(
-		'requires %s before making a request',
-		(field) => {
-			const byField: Record<string, [string, string]> = {
-				contactId: ['contact', 'get'],
-				messageId: ['message', 'get'],
-			};
-			const [resource, operation] = byField[field];
-			expect(() => buildOperation(executeContext({}) as never, 0, resource, operation)).toThrow(
-				new RegExp(`${field} is required`),
-			);
-		},
-	);
+	// The message must name the field as the UI labels it, never the internal parameter.
+	it.each([
+		['contact', 'get', 'Contact ID'],
+		['message', 'get', 'Message ID'],
+		['message', 'getActivities', 'Message ID'],
+		['numberLookup', 'lookup', 'Phone Number'],
+	])('%s.%s reports the missing field by its display name', (resource, operation, label) => {
+		expect(() => buildOperation(executeContext({}) as never, 0, resource, operation)).toThrow(
+			`${label} is required`,
+		);
+	});
 });
