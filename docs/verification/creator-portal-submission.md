@@ -11,20 +11,20 @@ This is a human handoff document, not evidence of publication or verification.
 | Git tag for published version | **None** |
 | npm provenance | **Not available; no publication occurred** |
 | Community scanner | **Scanner 0.31.0 returned registry HTTP 404 for `@sentdm/n8n-nodes-sent@0.1.0`; published-package scan pending** |
-| Support contact | `support@sent.dm` from Sent documentation; **human confirmation required** |
-| Maintainer contact | **Human completion required** |
+| Support contact | `support@sent.dm` |
+| Maintainer contact | `support@sent.dm` |
 | API documentation | `https://docs.sent.dm` |
-| Credential/authentication documentation | `https://docs.sent.dm/api-reference/authentication` |
+| Credential/authentication documentation | `https://docs.sent.dm/reference/api/authentication` |
 
 ## Node operations summary
 
-The `Sent` action node exposes Account, Message, Conversation, Contact, Template, Profile, Campaign, User, Webhook, and Number Lookup operations for all distinct stable public v3 routes found in the 2026-08-04 documentation review. The `Sent Trigger` registers verified message/template webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a durable-deduplication key. See [API coverage](api-coverage.md).
+The `Sent` action node exposes 38 operations across Account, Message, Contact, Template, Profile, Brand Campaign, User, Webhook, and Number Lookup. Conversation endpoints and contact create/update/message-summary are deliberately excluded; see [API coverage](api-coverage.md) for the reasons. The `Sent Trigger` registers verified message/template webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a redelivery-stable deduplication key.
 
 ## Known limitations
 
 - Package/repository publication, tag creation, GitHub Actions execution, provenance, public metadata, scanner pass, and Creator Portal submission are external actions still pending.
 - Exact public checks currently fail: npm returns E404 and GitHub is not anonymously readable.
-- Official brand icons, legal holder, maintainer/security contact, and live Sent credential/webhook tests require human input.
+- Live Sent credential and webhook tests require a user-authorized API key and a public HTTPS endpoint.
 - Sent's current message request schema does not document scheduling.
 - Public HTTPS is required for trigger activation.
 - Advanced structured API objects are entered as validated JSON where a stable high-quality UI cannot safely infer undocumented fields.
@@ -42,7 +42,7 @@ On 2026-08-04, the public Nodes URL presented a sign-in page. The authenticated 
 - [ ] Supply latest version and its exact non-`v` Git tag.
 - [ ] Supply or link the successful GitHub Actions publish run and npm provenance.
 - [ ] Supply the passing community scanner result.
-- [ ] Supply confirmed maintainer, support, and security contacts.
+- [ ] Supply the support and security contact `support@sent.dm`.
 - [ ] Supply API documentation, authentication/credential documentation, README, and operation summary.
 - [ ] Describe known limitations accurately.
 - [ ] Attach screenshots/evidence only if the live form requests them.

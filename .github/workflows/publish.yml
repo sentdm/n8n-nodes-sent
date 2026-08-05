@@ -17,19 +17,21 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned to commit SHAs: this job holds `id-token: write`
+      # and publishes to npm, so a retagged `@v4` would be a direct supply-chain path.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
           registry-url: https://registry.npmjs.org
 
       - name: Use an npm version that supports Trusted Publishing
-        run: npm install --global npm@11
+        run: npm install --global npm@11.19.0
 
       - name: Clean install
         run: npm ci
@@ -47,18 +49,14 @@ jobs:
             exit 1
           fi
 
-      - name: Lint and type-check
-        run: npm run lint
-
       - name: Test
         run: npm test
 
-      - name: Build
-        run: npm run build
-
-      - name: Inspect exact package
-        run: npm pack --dry-run
-
+      # `n8n-node release` runs lint and build itself when GITHUB_ACTIONS is set, and its
+      # build starts with `rimraf('dist')`. Repeating lint/build/`npm pack --dry-run` here
+      # would inspect an artifact that is deleted and rebuilt before publish, so it is not
+      # repeated. Note this means the packed-contents inspection and the tracked-artifact
+      # scan live only in CI: tag a commit that CI has run on.
       - name: Publish with provenance
         env:
           NPM_CONFIG_PROVENANCE: 'true'

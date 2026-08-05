@@ -1,68 +1,77 @@
 # Verification readiness evidence
 
-Assessment date: 2026-08-04. “Configured” is not equivalent to published or n8n-verified.
+Assessment date: 2026-08-05. Every row below was produced by running the command in this checkout. "Configured" is not equivalent to published or n8n-verified.
 
-| Requirement | Relevant file | Evidence / command | Result | Remaining human action |
-| --- | --- | --- | --- | --- |
-| Official current scaffold/CLI | `package.json`, `docs/research/official-requirements.md` | `npm create @n8n/node`; `npx n8n-node --version`; CLI help inspected | Pass; local CLI 0.42.0 | Recheck before release |
-| Node 22+ | `package.json`, CI workflows | `node --version` → `v24.9.0`; starter requires 22+ | Pass | None |
-| Clean install | `package-lock.json` | `npm install` | Pass; 823 packages; audit findings recorded below | Use `npm ci` in clean GitHub Actions |
-| English UI/documentation | node descriptions, README/docs | CLI lint + repository review | Pass locally | Human editorial review |
-| API-key credential | `credentials/SentApi.credentials.ts` | Unit tests | Pass structurally; `/v3/me`, password field, `x-api-key` | Live valid/invalid-key test |
-| Stable Sent v3 coverage | action node/helpers, `api-coverage.md` | Documentation-to-code route matrix | Pass: 43 distinct method/path operations | Live representative API smoke tests |
-| Trigger lifecycle | `nodes/SentTrigger`, lifecycle tests | Mocked create/check/delete tests | Pass | Live public HTTPS activation/deactivation |
-| Raw-body signature security | signature helper/trigger/tests | deterministic HMAC/replay/body mutation tests | Pass | Live Sent delivery test |
-| Pagination bounded | transport/tests | mocked empty/multiple/limit tests; 10,000-page guard | Pass | Live list smoke test |
-| Errors safe and actionable | transport/tests | envelope, 204, 422, 429, network paths | Pass locally | Live representative 401/403/5xx checks |
-| No runtime dependencies | `package.json` | package metadata inspection | Pass | Recheck packed manifest |
-| MIT license | `LICENSE.md`, `package.json` | license inspection | Partial | Replace legal holder placeholder |
-| Approved branding | `icons/sent.placeholder*.svg` | static SVG inspection | Partial | Replace with approved Sent SVGs |
-| README/support/security | README, `SECURITY.md`, governance files | file review | Partial | Confirm contacts and legal governance owner |
-| CI quality gates | `.github/workflows/ci.yml` | YAML review | Configured | Run in public GitHub repository |
-| Actions publication/provenance | `.github/workflows/publish.yml` | `id-token: write`, Trusted Publisher/OIDC, tag/version gate | Configured, not run | Configure npm Trusted Publisher and push authorized tag |
-| Public GitHub/npm metadata | `package.json` | URLs/metadata exact locally | Not externally verifiable yet | Create public repo/package and confirm no 404 |
-| Community scanner | scanner 0.31.0 | `--help` was interpreted as package and returned npm 404; tool is registry-only | Blocked until npm publication | Scan exact published version and preserve pass evidence |
-| Creator Portal | `creator-portal-submission.md` | Public page inspection showed sign-in only | Not submitted | Authenticated human completion after publication |
-| Public URL accessibility | intended GitHub/npm URLs | `git ls-remote` returned authentication failure; `npm view` returned E404 | Fail as expected before publication | Create public repository and publish package |
+## Command log
 
-## Final command log
+Environment: Node.js `v24.6.0`, npm `11.17.0`, pnpm `11.7.0`, `@n8n/node-cli/0.42.0 darwin-arm64 node-v24.6.0`.
 
-This table is finalized after the last repository edits. Exact final results will be updated if any command is rerun.
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `pnpm install` | 0 | Lockfile satisfied; 824 resolved dependencies (153 prod, 669 dev, 95 optional, 69 peer) |
+| `pnpm run lint` | 0 | `n8n-node lint` 0.42.0, no errors or warnings |
+| `pnpm exec tsc --noEmit` | 0 | No type errors under `strict` + `noUnusedLocals` |
+| `pnpm test` | 0 | 8 files / **148 tests** passed |
+| `pnpm run build` | 0 | TypeScript build and static-file copy successful |
+| `npm pack --dry-run` | 0 | 27 files, 20.9 kB packed / 87.8 kB unpacked |
+| `npm audit --omit=dev` | 0 | **0 vulnerabilities** |
+| `npm audit` | 1 | 6 moderate, 2 high — all in development-only CLI/release tooling; see below |
+| CI gate: tracked-artifact grep | 1 (no match) | No tracked `.env`, `coverage/`, `node_modules/`, or `dist/` |
+| CI gate: unsafe-construct grep | 1 (no match) | No `NODE_TLS_REJECT_UNAUTHORIZED`, `rejectUnauthorized: false`, `process.env`, `child_process`, `eval(`, or `<script` across `credentials`, `nodes`, `icons`, `package.json` |
+| JSON/YAML parse check | 0 | 3 example workflows, 2 node codex files, `package.json`, and 2 Actions workflows all parse |
+| `curl -IL https://github.com/sentdm/n8n-nodes-sent` | — | **404** — the repository is not public yet |
+| `npm view @sentdm/n8n-nodes-sent` | — | **E404** — the package is not published yet |
 
-| Command | Result |
-| --- | --- |
-| `npm install` | Pass; 823 packages installed |
-| `npx n8n-node --version` | Pass; `@n8n/node-cli/0.42.0 darwin-arm64 node-v24.9.0` |
-| `npm run lint:fix` | Pass |
-| `npm run lint` | Pass; official `n8n-node lint` 0.42.0 |
-| `npm test -- --reporter=dot` | Pass; 5 files / 48 tests |
-| `npm run build` | Pass; TypeScript and static-file build successful |
-| `npm run dev` | Partial; watcher compiled with 0 errors, but bundled n8n 2.33.3 bootstrap remained in peer-dependency resolution and port 5678 was not reachable before an intentional clean stop |
-| workflow JSON/YAML parse checks | Pass; 9 workflow JSON files and 2 Actions YAML files parsed |
-| `npm pack --dry-run --json --cache /private/tmp/n8n-sent-npm-cache` | Pass; 27 files, 20.4 KB packed / 90.1 KB unpacked; only compiled nodes/credential, icons, package metadata, README, license, changelog |
-| `npm audit --omit=dev --json` | Pass; 0 runtime/production vulnerabilities |
-| `npm audit --json` | Advisory result; 6 moderate and 2 high findings in development-only official CLI/release transitive packages; no runtime dependency is published |
-| `npx --yes @n8n/scan-community-package@0.31.0 --help` | Tool has no help mode and treated `--help` as an npm package, returning 404 |
-| `npx --yes @n8n/scan-community-package@0.31.0 @sentdm/n8n-nodes-sent@0.1.0` | Expected pre-publication failure: registry HTTP 404; scanner itself exits 0 on this failure, so publish workflow checks its success text |
-| `npm view @sentdm/n8n-nodes-sent version repository --json` | E404: package not published |
-| `git ls-remote https://github.com/sentdm/n8n-nodes-sent` | Authentication failure: repository is not publicly readable |
+### Packed contents
 
-## Evidence still requiring external state
+Only compiled output and required metadata ship:
 
-The public GitHub repository, npm package, Git tag, GitHub Actions publish run, npm provenance, published-package scanner pass, and Creator Portal form do not exist or cannot be accessed yet. They must remain marked pending; local implementation cannot substitute for them.
+```
+CHANGELOG.md  LICENSE.md  README.md  package.json
+dist/credentials/SentApi.credentials.{js,d.ts}
+dist/icons/sent-logo.svg  dist/icons/sent-logo.dark.svg
+dist/nodes/Sent/**  dist/nodes/SentTrigger/**  dist/package.json
+```
+
+No tests, examples, docs, plans, CI workflows, or source `.ts` files are included.
+
+## Requirement matrix
+
+| Requirement | Evidence | Result | Remaining human action |
+| --- | --- | --- | --- |
+| Official scaffold and CLI | `@n8n/node-cli` 0.42.0 pinned in `devDependencies`; `eslint.config.mjs` is the unmodified default re-export that strict mode requires | Pass | Recheck the CLI version before release |
+| Node.js 22+ | `engines.node: ">=22"`; both workflows use Node 22 | Pass | None |
+| Clean install | `package-lock.json` committed; both workflows use `npm ci` | Pass | None |
+| English UI and documentation | `n8n-node lint` plus editorial review | Pass | None |
+| API-key credential | `credentials/SentApi.credentials.ts`: password field, `x-api-key`, `GET /v3/me` test, themed icon | Pass structurally | Live valid/invalid-key test |
+| Stable Sent v3 coverage | 38 of the 43 documented operations, each asserted in `test/operations.test.ts`; 5 documented exclusions | Pass | Live representative API smoke tests |
+| Trigger registers a real webhook | `description.webhooks` carries no `restartWebhook`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Live activation against a public HTTPS URL |
+| Trigger is not an AI tool | `usableAsTool` is `undefined`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Confirm no "Sent Trigger Tool" appears in the AI Tools panel |
+| Raw-body signature security | Deterministic HMAC, replay window, body-mutation and rejection tests; a rejected delivery produces no execution | Pass | Live Sent delivery and a forged-body 401 |
+| Pagination bounded and correct | Constant page size across pages, `limit=150` two-page distinctness test, 10,000-page guard | Pass | Live list smoke test |
+| Errors safe and actionable | Envelope, 204, 401, 422, 429, network, and timeout paths; redaction asserted against `error.message`, not only `JSON.stringify` | Pass | Live 401/403/5xx checks |
+| No runtime dependencies | `package.json` declares no `dependencies`; the production audit is 0 | Pass | None |
+| MIT license | `LICENSE.md`, `package.json` | Pass | None |
+| Branding | Square `viewBox="0 0 64 64"` Sent chevron, light and dark, on both nodes and the credential | Pass | Brand-owner sign-off |
+| README, support, security | README, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, all pointing at `support@sent.dm` | Pass | None |
+| CI quality gates | `.github/workflows/ci.yml`; the runtime-safety grep is scoped to shipped sources so it cannot match itself | Pass locally | Run in the public repository |
+| Publication and provenance | `.github/workflows/publish.yml`: `id-token: write`, SHA-pinned actions, pinned npm, tag/version gate, provenance, post-publish scan | Configured, not run | Bootstrap npm, add a Trusted Publisher, push a tag |
+| Public GitHub and npm metadata | `package.json` URLs are exact locally | Not externally verifiable | Create the public repository and publish |
+| Community scanner | Registry-only tool; needs a published version | Blocked until publication | Scan the exact published version at `@0.31.0` and `@beta` |
+| Creator Portal | `creator-portal-submission.md` | Not submitted | Authenticated human completion after publication |
+
+## What still needs external state
+
+The public GitHub repository, the npm package, the Git tag, the Actions publish run, npm provenance, the scanner pass, and the Creator Portal submission do not exist yet. Local implementation cannot substitute for them; `submission-checklist.md` has the required ordering.
 
 ## Security audit interpretation
 
-The full development install inherits eight advisories through `@n8n/node-cli` 0.42.0 and the official starter's release tooling (`release-it`/`undici`, plus CLI AI-tooling dependencies). The packed package has no runtime `dependencies`, and the production-only audit is zero. Do not run `npm audit fix --force`: npm proposes downgrading the official CLI to 0.20.0 and upgrading release tooling across a major version, which would break the source-of-truth alignment without an n8n-supported migration.
+The development install inherits eight advisories through `@n8n/node-cli` 0.42.0 and the official starter's release tooling. The published package has no runtime `dependencies` and the production-only audit is zero, so none of the eight reaches a user. Do not run `npm audit fix --force`: npm proposes downgrading the official CLI to 0.20.0 and a major-version bump of the release tooling, which would break alignment with the official starter without an n8n-supported migration.
 
 ## Repository security review
 
-Repository-wide searches covered API keys, bearer tokens, `whsec_`, phone numbers, email addresses, `.env`, `process.env`, filesystem access, child/shell execution, dynamic evaluation, TLS bypasses, authorization headers, retry loops, and unsafe SVG constructs. Matches were limited to:
+Searches covered API keys, bearer tokens, `whsec_`, phone numbers, email addresses, `.env`, `process.env`, filesystem access, child and shell execution, dynamic evaluation, TLS bypasses, authorization headers, retry loops, and unsafe SVG constructs. Matches were limited to credential field and header declarations, synthetic `whsec_` values and reserved example phone numbers in tests, the documented `support@sent.dm` address and the `e.g. person@example.com` placeholder, `.env` deny patterns in `.gitignore` and CI, and the bounded pagination loop.
 
-- credential field/header declarations and documentation;
-- synthetic `whsec_` values and reserved example telephone numbers in tests/workflows;
-- the documented `support@sent.dm` address and placeholder `person@example.com`;
-- `.env` deny patterns in `.gitignore`/CI;
-- the bounded pagination loop and documented webhook retry configuration.
+No runtime filesystem or environment access, shell or dynamic-code execution, TLS weakening, secret logging, embedded SVG scripts or remote references, unbounded retry, or credential fixture was found. Both icons are static path data with no `<script>`, `<image>`, or external `href`. The shared transport redacts secret, token, phone, recipient, and body fields from validation details and normalizes low-level network errors before emitting them.
 
-No runtime filesystem/environment access, shell/dynamic-code execution, TLS weakening, secret logging, embedded SVG scripts/remote references, unbounded retry, or credential fixture was found. The shared transport redacts secret/token/phone/recipient/body fields from validation details and normalizes low-level network errors before emitting them.
+One residual risk is accepted and documented rather than fixed: the webhook signing secret lives in n8n workflow static data, which n8n stores unencrypted and copies into saved executions. Sent returns that secret only from `POST /v3/webhooks`, so moving it to a credential field would mean giving up automatic registration. See the README's *Webhook security* section.

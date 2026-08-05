@@ -53,7 +53,9 @@ export class SentTrigger implements INodeType {
 		subtitle: '={{$parameter["eventTypes"].join(", ")}}',
 		description: 'Starts a workflow from a verified Sent webhook event',
 		defaults: { name: 'Sent Trigger' },
-		usableAsTool: true,
+		// A trigger must not be exposed as an AI tool: n8n filters tool candidates on
+		// Boolean(usableAsTool) with no trigger guard, and the type forbids `false`.
+		usableAsTool: undefined,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [{ name: 'sentApi', required: true }],
@@ -63,7 +65,6 @@ export class SentTrigger implements INodeType {
 				httpMethod: 'POST',
 				responseMode: 'onReceived',
 				path: 'webhook',
-				restartWebhook: true,
 			},
 		],
 		properties: [
@@ -104,13 +105,6 @@ export class SentTrigger implements INodeType {
 				placeholder: 'Add Option',
 				default: {},
 				options: [
-					{
-						displayName: 'Profile Scope ID',
-						name: 'profileScopeId',
-						type: 'string',
-						default: '',
-						description: 'Optional x-profile-ID header for organization API keys',
-					},
 					{
 						displayName: 'Retry Count',
 						name: 'retryCount',
@@ -199,7 +193,6 @@ export class SentTrigger implements INodeType {
 					.map((value) => value.trim())
 					.filter(Boolean);
 				const options = this.getNodeParameter('options', {}) as {
-					profileScopeId?: string;
 					retryCount?: number;
 					timeoutSeconds?: number;
 				};
@@ -210,7 +203,6 @@ export class SentTrigger implements INodeType {
 				const envelope = await sentApiRequest.call(this, {
 					method: 'POST',
 					path: '/v3/webhooks',
-					profileId: options.profileScopeId,
 					body: {
 						display_name: 'n8n Sent Trigger',
 						endpoint_url: webhookUrl,
@@ -314,7 +306,7 @@ export class SentTrigger implements INodeType {
 								'x-webhook-id': webhookId,
 								'x-webhook-timestamp': webhookTimestamp,
 							},
-							idempotencyKey: deriveEventIdempotencyKey(event, rawBody, webhookTimestamp),
+							idempotencyKey: deriveEventIdempotencyKey(event, rawBody),
 							rawEvent: event,
 						},
 					},

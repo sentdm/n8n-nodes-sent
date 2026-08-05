@@ -53,19 +53,55 @@ function redactErrorDetails(value: unknown): unknown {
 	);
 }
 
-export function parseJsonInput(value: string, fieldName: string, node: INode): IDataObject {
-	if (!value.trim()) return {};
-	try {
-		const parsed: unknown = JSON.parse(value);
-		if (!isObject(parsed)) {
-			throw new Error(`${fieldName} must contain a JSON object`);
+export function parseJsonInput(value: unknown, fieldName: string, node: INode): IDataObject {
+	// An expression such as `={{ $json.vars }}` resolves to a real object, not to JSON
+	// text, so a JSON field is not guaranteed to arrive as a string.
+	if (isObject(value)) return value;
+	if (value === undefined || value === null) return {};
+
+	let parsed: unknown = value;
+	if (typeof value === 'string') {
+		if (!value.trim()) return {};
+		try {
+			parsed = JSON.parse(value);
+		} catch (error) {
+			throw new NodeOperationError(node, error as Error, {
+				message: `${fieldName} is not valid JSON`,
+			});
 		}
-		return parsed;
-	} catch (error) {
-		throw new NodeOperationError(node, error as Error, {
-			message: `${fieldName} is not valid JSON`,
-		});
 	}
+
+	// Deliberately outside the try: a wrong shape is not a parse failure, and reporting
+	// it as one hides the actual problem from the user.
+	if (!isObject(parsed)) {
+		throw new NodeOperationError(node, `${fieldName} must contain a JSON object`);
+	}
+	return parsed;
+}
+
+// Classifies a transport-level failure into the error the node should surface. Returning
+// rather than throwing keeps `sentApiRequest` readable and makes the two cases explicit.
+function asTransportError(node: INode, error: unknown, itemIndex?: number): Error {
+	// n8n raises its own typed errors from httpRequestWithAuthentication — a missing
+	// credential, for example. Those already carry the right message and context, so
+	// relabelling them as a network failure would hide the real cause.
+	if (error instanceof NodeApiError || error instanceof NodeOperationError) return error;
+
+	const timedOut = error instanceof Error && /timeout|timed out|ETIMEDOUT/i.test(error.message);
+	return new NodeApiError(
+		node,
+		{
+			message: timedOut ? 'Sent API request timed out' : 'Network request failed',
+			name: timedOut ? 'SentTimeoutError' : 'SentNetworkError',
+		},
+		{
+			itemIndex,
+			message: timedOut ? 'Sent API request timed out' : 'Sent API request failed',
+			description: timedOut
+				? 'The request exceeded its configured timeout. Confirm service health before retrying a mutation.'
+				: 'Check network connectivity and the Sent service status, then try again.',
+		},
+	);
 }
 
 export function compactObject(value: IDataObject): IDataObject {
@@ -80,7 +116,6 @@ export async function sentApiRequest(
 ): Promise<SentEnvelope> {
 	const headers: Record<string, string> = { Accept: 'application/json' };
 	if (request.idempotencyKey) headers['Idempotency-Key'] = request.idempotencyKey;
-	if (request.profileId) headers['x-profile-id'] = request.profileId;
 
 	const options: IHttpRequestOptions = {
 		method: request.method,
@@ -101,17 +136,7 @@ export async function sentApiRequest(
 			options,
 		)) as SentHttpResponse;
 	} catch (error) {
-		const timedOut = error instanceof Error && /timeout|timed out|ETIMEDOUT/i.test(error.message);
-		throw new NodeApiError(this.getNode(), {
-			message: timedOut ? 'Sent API request timed out' : 'Network request failed',
-			name: timedOut ? 'SentTimeoutError' : 'SentNetworkError',
-		}, {
-			itemIndex: request.itemIndex,
-			message: timedOut ? 'Sent API request timed out' : 'Sent API request failed',
-			description: timedOut
-				? 'The request exceeded its configured timeout. Confirm service health before retrying a mutation.'
-				: 'Check network connectivity and the Sent service status, then try again.',
-		});
+		throw asTransportError(this.getNode(), error, request.itemIndex);
 	}
 
 	if (response.statusCode === 204) {
@@ -159,10 +184,13 @@ export async function sentApiRequestAllItems(
 	limit: number,
 ): Promise<IDataObject[]> {
 	const output: IDataObject[] = [];
+	// Sent paginates by page number, so page_size has to stay constant for the whole
+	// run: shrinking it between requests redefines the offset `page` points at and
+	// re-fetches rows already returned. Over-fetching is discarded by the slices below.
+	const pageSize = returnAll ? 100 : Math.min(100, Math.max(1, limit));
 	let page = 1;
 
 	do {
-		const pageSize = Math.min(100, returnAll ? 100 : Math.max(1, limit - output.length));
 		const envelope = await sentApiRequest.call(this, {
 			...request,
 			query: { ...request.query, page, page_size: pageSize },
@@ -187,6 +215,6 @@ export async function sentApiRequestAllItems(
 export function unwrapEnvelope(envelope: SentEnvelope): IDataObject[] {
 	const data = envelope.data;
 	if (Array.isArray(data)) return data;
-	if (!isObject(data)) return [{ success: envelope.success ?? true, meta: envelope.meta ?? {} }];
+	if (!isObject(data)) return [{ success: envelope.success ?? true, _meta: envelope.meta ?? {} }];
 	return [{ ...data, _meta: envelope.meta ?? {} }];
 }

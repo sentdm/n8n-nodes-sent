@@ -31,4 +31,36 @@ describe('Sent action parameter schema', () => {
 			),
 		).not.toThrow();
 	});
+
+	it.each([
+		['message', 'send'],
+		['contact', 'delete'],
+		['template', 'update'],
+		['user', 'remove'],
+		['webhook', 'rotateSecret'],
+	])('displays the shared Options collection for %s.%s', (resource, operation) => {
+		const resolved = getNodeParameters(
+			sentProperties,
+			{ resource, operation, requestOptions: { sandbox: true } },
+			true,
+			false,
+			{ typeVersion: 1 },
+			null,
+		);
+
+		expect(resolved?.requestOptions).toEqual({ sandbox: true });
+	});
+
+	it('hides the Options collection for Webhook Delete, which supports neither field', () => {
+		const resolved = getNodeParameters(
+			sentProperties,
+			{ resource: 'webhook', operation: 'delete', webhookId: 'wh-1' },
+			true,
+			false,
+			{ typeVersion: 1 },
+			null,
+		);
+
+		expect(resolved).not.toHaveProperty('requestOptions');
+	});
 });

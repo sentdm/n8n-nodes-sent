@@ -10,6 +10,6 @@ Be respectful, give constructive feedback, accept responsibility, focus on what 
 
 ## Enforcement
 
-Report conduct concerns privately to the confirmed maintainer contact. Until that address is confirmed, do not publish the package or repository as ready for community governance. Maintainers must investigate promptly, protect reporter privacy, and take proportionate corrective action, including warnings or temporary/permanent bans.
+Report conduct concerns privately to [support@sent.dm](mailto:support@sent.dm). Maintainers must investigate promptly, protect reporter privacy, and take proportionate corrective action, including warnings or temporary/permanent bans.
 
 This policy is adapted from the [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).

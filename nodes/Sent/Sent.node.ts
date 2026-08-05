@@ -11,7 +11,7 @@ import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 import { sentProperties } from './actions/properties';
 import { buildOperation } from './helpers/operations';
-import { sentApiRequest, sentApiRequestAllItems, unwrapEnvelope } from './transport';
+import { compactObject, sentApiRequest, sentApiRequestAllItems, unwrapEnvelope } from './transport';
 
 export class Sent implements INodeType {
 	description: INodeTypeDescription = {
@@ -35,19 +35,26 @@ export class Sent implements INodeType {
 
 	methods = {
 		listSearch: {
-			async getTemplates(this: ILoadOptionsFunctions): Promise<INodeListSearchResult> {
+			async getTemplates(
+				this: ILoadOptionsFunctions,
+				filter?: string,
+			): Promise<INodeListSearchResult> {
 				const envelope = await sentApiRequest.call(this, {
 					method: 'GET',
 					path: '/v3/templates',
-					query: { page: 1, page_size: 100 },
+					query: compactObject({ page: 1, page_size: 100, search: filter }),
 				});
 				const data = envelope.data as IDataObject | undefined;
 				const templates = Array.isArray(data?.templates) ? (data.templates as IDataObject[]) : [];
 				return {
-					results: templates.map((template) => ({
-						name: String(template.name ?? template.id ?? 'Unnamed template'),
-						value: String(template.id ?? ''),
-					})),
+					results: templates
+						// A template without an ID cannot be selected, and an empty value would
+						// silently send `template: {}`.
+						.filter((template) => typeof template.id === 'string' && template.id !== '')
+						.map((template) => ({
+							name: String(template.name ?? template.id),
+							value: String(template.id),
+						})),
 				};
 			},
 		},

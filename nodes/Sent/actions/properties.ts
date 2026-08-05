@@ -4,7 +4,6 @@ const resourceOptions = [
 	{ name: 'Account', value: 'account' },
 	{ name: 'Brand Campaign', value: 'campaign' },
 	{ name: 'Contact', value: 'contact' },
-	{ name: 'Conversation', value: 'conversation' },
 	{ name: 'Message', value: 'message' },
 	{ name: 'Number Lookup', value: 'numberLookup' },
 	{ name: 'Profile', value: 'profile' },
@@ -22,16 +21,9 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 		{ name: 'Update', value: 'update', action: 'Update a brand campaign' },
 	],
 	contact: [
-		{ name: 'Create', value: 'create', action: 'Create a contact' },
 		{ name: 'Delete', value: 'delete', action: 'Delete a contact' },
 		{ name: 'Get', value: 'get', action: 'Get a contact' },
 		{ name: 'Get Many', value: 'getMany', action: 'Get many contacts' },
-		{ name: 'Get Message Summary', value: 'getMessageSummary', action: 'Get a contact message summary' },
-		{ name: 'Update', value: 'update', action: 'Update a contact' },
-	],
-	conversation: [
-		{ name: 'Get Many', value: 'getMany', action: 'Get many conversation messages' },
-		{ name: 'Get Messages', value: 'getMessages', action: 'Get messages in a conversation' },
 	],
 	message: [
 		{ name: 'Get', value: 'get', action: 'Get a message' },
@@ -75,51 +67,22 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 	],
 };
 
-const mutationOperations = ['create', 'delete', 'update', 'send', 'complete', 'invite', 'remove', 'updateRole', 'rotateSecret', 'test', 'toggleStatus'];
-
-const idempotencyKeyOption: INodeProperties = {
-	displayName: 'Idempotency Key',
-	name: 'idempotencyKey',
-	type: 'string',
-	default: '',
-	description: '1-255 letters, numbers, hyphens, or underscores. Reuse the same key when retrying.',
-};
-
-const profileScopeOption: INodeProperties = {
-	displayName: 'Profile Scope ID',
-	name: 'profileScopeId',
-	type: 'string',
-	default: '',
-	description: 'Optional profile scope for organization API keys',
-};
-
-const sandboxOption: INodeProperties = {
-	displayName: 'Sandbox',
-	name: 'sandbox',
-	type: 'boolean',
-	default: false,
-	description: 'Whether Sent should validate and simulate this supported mutation without side effects',
-};
-
-const commonMutationOptions: INodeProperties[] = [
-	idempotencyKeyOption,
-	profileScopeOption,
-	sandboxOption,
+const mutationOptions: INodeProperties[] = [
+	{
+		displayName: 'Idempotency Key',
+		name: 'idempotencyKey',
+		type: 'string',
+		default: '',
+		description: '1-255 letters, numbers, hyphens, or underscores. Reuse the same key when retrying.',
+	},
+	{
+		displayName: 'Sandbox',
+		name: 'sandbox',
+		type: 'boolean',
+		default: false,
+		description: 'Whether Sent should validate and simulate this supported mutation without side effects',
+	},
 ];
-
-const requestOptionsCollection = (
-	name: string,
-	displayOptions: INodeProperties['displayOptions'],
-	options: INodeProperties[],
-): INodeProperties => ({
-	displayName: 'Options',
-	name,
-	type: 'collection',
-	placeholder: 'Add Option',
-	default: {},
-	displayOptions,
-	options,
-});
 
 const idFields: INodeProperties[] = [
 	{
@@ -128,15 +91,7 @@ const idFields: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		displayOptions: { show: { resource: ['contact'], operation: ['delete', 'get', 'getMessageSummary', 'update'] } },
-	},
-	{
-		displayName: 'Conversation ID',
-		name: 'conversationId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['conversation'], operation: ['getMessages'] } },
+		displayOptions: { show: { resource: ['contact'], operation: ['delete', 'get'] } },
 	},
 	{
 		displayName: 'Message ID',
@@ -204,8 +159,8 @@ const paginationFields: INodeProperties[] = [
 		default: false,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'conversation', 'template', 'webhook'],
-				operation: ['getMany', 'getMessages', 'getEvents'],
+				resource: ['contact', 'template', 'webhook'],
+				operation: ['getMany', 'getEvents'],
 			},
 		},
 		description: 'Whether to return all results or only up to a given limit',
@@ -218,8 +173,8 @@ const paginationFields: INodeProperties[] = [
 		default: 50,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'conversation', 'template', 'webhook'],
-				operation: ['getMany', 'getMessages', 'getEvents'],
+				resource: ['contact', 'template', 'webhook'],
+				operation: ['getMany', 'getEvents'],
 				returnAll: [false],
 			},
 		},
@@ -252,8 +207,8 @@ export const sentProperties: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		placeholder: '+14155550123',
-		displayOptions: { show: { resource: ['contact', 'numberLookup'], operation: ['create', 'lookup'] } },
+		placeholder: 'e.g. +14155550123',
+		displayOptions: { show: { resource: ['numberLookup'], operation: ['lookup'] } },
 		description: 'Phone number in an international format accepted by Sent',
 	},
 	{
@@ -262,7 +217,9 @@ export const sentProperties: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		placeholder: '+14155550123,+442071234567',
+		// Both numbers are reserved for fiction: NANP 555-01xx and Ofcom's 020 7946 0xxx
+		// drama range. Never put an allocatable number in a copy-pasteable placeholder.
+		placeholder: 'e.g. +14155550123,+442079460123',
 		displayOptions: { show: { resource: ['message'], operation: ['send'] } },
 		description: 'Comma-separated recipient phone numbers',
 	},
@@ -295,7 +252,7 @@ export const sentProperties: INodeProperties[] = [
 		displayName: 'Template',
 		name: 'messageTemplate',
 		type: 'resourceLocator',
-		default: { mode: 'id', value: '' },
+		default: { mode: 'list', value: '' },
 		required: true,
 		modes: [
 			{ displayName: 'From List', name: 'list', type: 'list', typeOptions: { searchListMethod: 'getTemplates', searchable: true } },
@@ -328,7 +285,7 @@ export const sentProperties: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		placeholder: 'person@example.com',
+		placeholder: 'e.g. person@example.com',
 		displayOptions: { show: { resource: ['user'], operation: ['invite'] } },
 	},
 	{
@@ -558,62 +515,30 @@ export const sentProperties: INodeProperties[] = [
 		displayOptions: { show: { resource: ['webhook'], operation: ['getEvents'] } },
 		options: [{ displayName: 'Search', name: 'search', type: 'string', default: '' }],
 	},
-	requestOptionsCollection(
-		'requestOptions',
-		{ show: { operation: ['create', 'send', 'complete', 'invite', 'updateRole', 'rotateSecret', 'test', 'toggleStatus'] } },
-		commonMutationOptions,
-	),
-	requestOptionsCollection(
-		'updateOptions',
-		{ show: { resource: ['campaign', 'profile', 'template', 'webhook'], operation: ['update'] } },
-		commonMutationOptions,
-	),
-	requestOptionsCollection(
-		'contactUpdateOptions',
-		{ show: { resource: ['contact'], operation: ['update'] } },
-		[
-			{
-				displayName: 'Default Channel',
-				name: 'defaultChannel',
-				type: 'options',
-				options: [
-					{ name: 'SMS', value: 'sms' },
-					{ name: 'WhatsApp', value: 'whatsapp' },
-				],
-				default: 'sms',
-			},
-			idempotencyKeyOption,
-			{
-				displayName: 'Opt Out',
-				name: 'optOut',
-				type: 'boolean',
-				default: false,
-			},
-			profileScopeOption,
-			sandboxOption,
-		],
-	),
-	requestOptionsCollection(
-		'deleteOptions',
-		{ show: { resource: ['campaign', 'contact', 'profile', 'template'], operation: ['delete'] } },
-		[profileScopeOption, sandboxOption],
-	),
-	requestOptionsCollection(
-		'webhookDeleteOptions',
-		{ show: { resource: ['webhook'], operation: ['delete'] } },
-		[profileScopeOption],
-	),
-	requestOptionsCollection(
-		'removeOptions',
-		{ show: { resource: ['user'], operation: ['remove'] } },
-		[profileScopeOption, sandboxOption],
-	),
+	// One Options collection covers every mutation. It is declared twice under the
+	// same name because `Webhook → Delete` documents neither sandbox nor idempotency
+	// support, and n8n hides a parameter as soon as *any* `hide` rule matches — so
+	// "all mutations except webhook delete" cannot be expressed in one rule set.
 	{
-		displayName: 'Profile Scope ID',
-		name: 'profileScopeId',
-		type: 'string',
-		default: '',
-		displayOptions: { hide: { operation: mutationOperations } },
-		description: 'Optional profile scope for organization API keys',
+		displayName: 'Options',
+		name: 'requestOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: {
+			show: {
+				operation: ['complete', 'create', 'invite', 'remove', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update', 'updateRole'],
+			},
+		},
+		options: mutationOptions,
+	},
+	{
+		displayName: 'Options',
+		name: 'requestOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: { show: { resource: ['campaign', 'contact', 'profile', 'template'], operation: ['delete'] } },
+		options: mutationOptions,
 	},
 ];

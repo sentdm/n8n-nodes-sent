@@ -66,7 +66,7 @@ describe('Send Message request construction', () => {
 
 	it('creates one broadcast channel entry for every explicit channel selection', () => {
 		const context = executeContext({
-			recipients: '+14155550123,+442071234567',
+			recipients: '+14155550123,+442079460123',
 			channels: ['whatsapp', 'sms'],
 			messageType: 'template',
 			messageTemplate: { mode: 'id', value: 'template-id' },
@@ -75,7 +75,7 @@ describe('Send Message request construction', () => {
 		});
 		const request = buildOperation(context as never, 0, 'message', 'send');
 		expect(request.body).toMatchObject({
-			to: ['+14155550123', '+442071234567'],
+			to: ['+14155550123', '+442079460123'],
 			channel: ['whatsapp', 'sms'],
 			template: { id: 'template-id', parameters: { name: 'Test' } },
 			sandbox: true,

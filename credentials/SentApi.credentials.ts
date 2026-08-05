@@ -10,7 +10,10 @@ export class SentApi implements ICredentialType {
 
 	displayName = 'Sent API';
 
-	icon = 'file:../icons/sent-logo.svg' as const;
+	icon = {
+		light: 'file:../icons/sent-logo.svg',
+		dark: 'file:../icons/sent-logo.dark.svg',
+	} as const;
 
 	documentationUrl = 'https://docs.sent.dm/reference/api/authentication';
 

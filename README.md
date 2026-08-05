@@ -2,8 +2,6 @@
 
 An n8n community node package for the Sent API. It provides a `Sent` action node for the stable Sent API v3 resources and a `Sent Trigger` that registers, verifies, and removes Sent webhooks through the n8n webhook lifecycle.
 
-> **Package status:** pre-publication candidate. The package has not been published to npm, submitted to the n8n Creator Portal, or verified by n8n. Maintainer details require human confirmation before release.
-
 ## Compatibility
 
 - Node.js 22 or later (matching the current official n8n starter requirement)
@@ -15,7 +13,7 @@ The package has no runtime dependencies. `n8n-workflow` is a peer dependency.
 
 ## Installation
 
-After the package is publicly published, follow n8n's [community node installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) and install the exact npm name:
+Follow n8n's [community node installation guide](https://docs.n8n.io/integrations/community-nodes/installation-and-management) and install the exact npm name:
 
 ```text
 @sentdm/n8n-nodes-sent
@@ -27,7 +25,7 @@ For local development, clone the repository, use Node.js 22 or later, and run `n
 
 Create a Sent API key in Sent, then create a **Sent API** credential in n8n and paste the key into **API Key**. The credential injects the secret as `x-api-key` and tests it with `GET /v3/me`. The key is a password field and is never returned in node output.
 
-See Sent's [authentication documentation](https://docs.sent.dm/api-reference/authentication) for API-key types and permissions. Organization keys can use **Profile Scope ID** on node operations that need `x-profile-id` scoping.
+See Sent's [authentication documentation](https://docs.sent.dm/reference/api/authentication) for API-key types and permissions.
 
 ## Resources and operations
 
@@ -35,16 +33,15 @@ See Sent's [authentication documentation](https://docs.sent.dm/api-reference/aut
 | --- | --- |
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
-| Conversation | Get Many, Get Messages |
-| Contact | Create, Delete, Get, Get Many, Update, Get Message Summary |
+| Contact | Delete, Get, Get Many |
 | Template | Create, Delete, Get, Get Many, Update |
 | Profile | Create, Delete, Get, Get Many, Update, Complete Setup |
-| Campaign | Create, Delete, Get Many, Update |
+| Brand Campaign | Create, Delete, Get Many, Update |
 | User | Get, Get Many, Invite, Update Role, Remove |
 | Webhook | Create, Delete, Get, Get Many, Update, Toggle Status, Rotate Signing Secret, Test, Get Events, Get Event Types |
 | Number Lookup | Lookup |
 
-The endpoint-by-endpoint matrix and implementation status are in [API coverage](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/api-coverage.md).
+The endpoint-by-endpoint matrix is in [API coverage](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/api-coverage.md).
 
 ## Send Message
 
@@ -59,19 +56,21 @@ The channel choices follow Sent's documented semantics:
 
 Sent currently documents no scheduling field in the v3 send-message request, so this package does not invent one.
 
-## Sandbox behavior
+**Template Parameters**, **Definition JSON**, **Campaign JSON**, **Event Filters JSON**, and **Additional Fields JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
 
-Sandbox is an operation-level option only where the current Sent endpoint documents it. It is not a credential toggle. Sent documents sandbox support for mutations except webhook deletion. For that exception, the node omits both sandbox and idempotency controls. Sandbox behavior is implemented by passing `sandbox: true`; the package does not claim that a live side effect test was performed without a user-provided API key.
+## Sandbox and idempotency
+
+Mutations share one **Options** collection carrying **Sandbox** and **Idempotency Key**. Sandbox is an operation-level option, not a credential toggle: it is implemented by sending `sandbox: true` in the request body. Sent documents sandbox and idempotency support for every mutation except webhook deletion, so `Webhook → Delete` shows no Options collection and sends neither field.
 
 ## Pagination
 
-Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests pages of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. Profile, campaign, and user list endpoints currently return their complete documented collection without pagination parameters.
+Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. Profile, campaign, and user list endpoints currently return their complete documented collection without pagination parameters.
 
 ## Sent Trigger
 
-The trigger registers the n8n production webhook URL when a workflow activates, stores the returned webhook ID and signing secret in node workflow static data, checks for an existing registration, and deletes only that stored webhook when the workflow deactivates. Sent must be able to reach a public HTTPS URL; localhost, private-network, and non-HTTPS URLs are rejected.
+The trigger registers the n8n production webhook URL when a workflow activates, stores the returned webhook ID and signing secret in node workflow static data, checks for an existing registration, and deletes only that stored webhook when the workflow deactivates. Sent must be able to reach a public HTTPS URL; non-HTTPS URLs, `localhost`, `.local` names, IPv4 loopback/private ranges, `0.0.0.0`, and IPv6 loopback are rejected.
 
-The trigger dynamically loads active `message.*` event subtypes from `GET /v3/webhooks/event-types` and falls back to the documented static subtype list during a temporary API failure. Template filters accept comma-separated template names.
+The trigger dynamically loads active `message.*` event subtypes from `GET /v3/webhooks/event-types`. It falls back to the documented static subtype list whenever that call fails or returns no active `message.*` type, so the subtype picker is never empty. Template filters accept comma-separated template names.
 
 ### Webhook security
 
@@ -81,9 +80,13 @@ Every delivery is verified before workflow execution using the exact raw body an
 HMAC-SHA256(base64decode(secret after whsec_), webhookId + "." + timestamp + "." + rawBody)
 ```
 
-The expected header value is `v1,<base64 digest>`. Comparisons use Node.js `timingSafeEqual`; missing or malformed headers, modified bodies, and timestamps outside the ±300-second replay window receive HTTP 401. Signing secrets and signature headers are not emitted in workflow data.
+The expected header value is `v1,<base64 digest>`. Comparisons use Node.js `timingSafeEqual`; missing or malformed headers, modified bodies, and timestamps outside the ±300-second replay window receive HTTP 401 and start no execution. The trigger never emits the signing secret or the signature header in its output.
 
-Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and a transition-specific or hashed idempotency key. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/09-durable-webhook-deduplication.json).
+That guarantee is about the trigger. The action node's `Webhook → Create`, `Webhook → Get Many`, and `Webhook → Rotate Signing Secret` operations return Sent's response as-is, which includes `signing_secret` — that is the point of those operations, but it does mean their output lands in execution data. Route them accordingly.
+
+**Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret, and rotate the secret with **Webhook → Rotate Signing Secret** if either is exposed. Verification fails closed: without a stored secret every delivery is rejected with 401.
+
+Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and an idempotency key. The key is the resource ID plus its transition where the payload carries one, and otherwise a SHA-256 hash of the raw body; both are stable across Sent's redeliveries of the same event. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/09-durable-webhook-deduplication.json).
 
 ### Local webhook testing
 
@@ -91,19 +94,18 @@ Run `npm run dev`. Use a secure public HTTPS tunnel or an n8n instance with a pu
 
 ## Errors, rate limits, and retries
 
-Sent errors are surfaced with the HTTP status, safe Sent code/message, request ID, validation details, documentation URL, and `Retry-After` when present. The node handles 204 responses and n8n **Continue On Fail** item behavior. Mutations are never retried automatically because replaying them without an intentional idempotency key can duplicate side effects. Build rate-limit handling in the workflow using `Retry-After` and an explicit policy.
+Sent errors are surfaced with the HTTP status, safe Sent code/message, request ID, validation details, documentation URL, and `Retry-After` when present. Secret, token, phone, recipient, and body fields are redacted from validation details. The node handles 204 responses and n8n **Continue On Fail** item behavior. Mutations are never retried automatically because replaying them without an intentional idempotency key can duplicate side effects. Build rate-limit handling in the workflow using `Retry-After` and an explicit policy.
 
 ## Example workflows
 
-Importable JSON examples live in [`examples/workflows`](https://github.com/sentdm/n8n-nodes-sent/tree/main/examples/workflows): sandbox send, template send, message status, contact create/get, template list, number lookup, message-status trigger, inbound-message trigger, and durable webhook deduplication. They contain placeholders only—no credential IDs, secrets, or real phone numbers.
+Importable JSON examples live in [`examples/workflows`](https://github.com/sentdm/n8n-nodes-sent/tree/main/examples/workflows): a template send, an inbound-message trigger, and durable webhook deduplication. They contain placeholders only—no credential IDs, secrets, or real phone numbers.
 
 ## Known limitations
 
-- This is an unpublished candidate and cannot yet pass the scanner mode that downloads a package from npm.
-- The maintainer identity/contact requires confirmation.
 - Sent's documented v3 send schema has no scheduling input.
 - Some complex campaign, profile, template, and webhook filter objects use validated advanced JSON fields to preserve the current documented schema without inventing UI fields.
-- Webhook registration requires public HTTPS and real Sent credentials for an end-to-end activation test.
+- Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
+- Conversation endpoints and contact create/update/message-summary are not exposed by this package.
 
 ## Development and testing
 
@@ -121,28 +123,27 @@ npm pack --dry-run
 
 Direct CLI commands use `npx n8n-node <command>`. Tests use mocked responses only.
 
-## Publishing overview
+## Publishing
 
-Publishing is intentionally not performed by this task. After human review, use `npm run release` to prepare a version/tag and let `.github/workflows/publish.yml` publish from GitHub Actions with npm provenance and Trusted Publisher/OIDC. Then verify the public repository, npm metadata, provenance, tag/version match, scanner result, and URLs before entering the exact npm name in the [n8n Creator Portal](https://creators.n8n.io/nodes).
+Publication runs from GitHub Actions with npm provenance and an npm Trusted Publisher; see [`.github/workflows/publish.yml`](https://github.com/sentdm/n8n-nodes-sent/blob/main/.github/workflows/publish.yml). Because npm can only attach a Trusted Publisher to a package that already exists, the very first publish must be done by an authorized maintainer before OIDC can take over. The exact ordering is in the [submission checklist](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/submission-checklist.md).
 
 Only n8n can grant verified status.
 
 ## Support and security
 
-- Product/API support: [support@sent.dm](mailto:support@sent.dm) (documented by Sent; confirm before publication)
+- Product/API support: [support@sent.dm](mailto:support@sent.dm)
 - Package issues: [GitHub Issues](https://github.com/sentdm/n8n-nodes-sent/issues)
 - Security reports: follow [SECURITY.md](https://github.com/sentdm/n8n-nodes-sent/blob/main/SECURITY.md)
-- Maintainer contact: human confirmation required before publication
 
 ## Resources
 
 - [Sent API documentation](https://docs.sent.dm)
-- [Sent authentication](https://docs.sent.dm/api-reference/authentication)
-- [n8n node-building documentation](https://docs.n8n.io/integrations/creating-nodes/build/n8n-node/)
-- [n8n community nodes](https://docs.n8n.io/integrations/community-nodes/)
+- [Sent authentication](https://docs.sent.dm/reference/api/authentication)
+- [n8n node-building documentation](https://docs.n8n.io/connect/create-nodes/overview)
+- [n8n community nodes](https://docs.n8n.io/integrations/community-nodes)
 - [Official n8n starter](https://github.com/n8n-io/n8n-nodes-starter)
 - [n8n Creator Portal](https://creators.n8n.io/nodes)
 
 ## Version history
 
-See [CHANGELOG.md](https://github.com/sentdm/n8n-nodes-sent/blob/main/CHANGELOG.md). Version `0.1.0` is the initial, unpublished candidate.
+See [CHANGELOG.md](https://github.com/sentdm/n8n-nodes-sent/blob/main/CHANGELOG.md).

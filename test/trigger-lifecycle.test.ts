@@ -23,6 +23,29 @@ function hookContext(
 	};
 }
 
+describe('Sent Trigger webhook contract', () => {
+	const description = new SentTrigger().description;
+
+	it('declares a production webhook n8n will actually register', () => {
+		const webhooks = description.webhooks ?? [];
+		expect(webhooks).toHaveLength(1);
+		// Load-bearing: `restartWebhook: true` marks a wait/resume webhook, and every
+		// caller of getNodeWebhooks() passes ignoreRestartWebhooks=true, so the webhook
+		// would never be collected, created at Sent, or routed to.
+		expect(webhooks[0]).not.toHaveProperty('restartWebhook');
+		expect(webhooks[0]).toMatchObject({
+			name: 'default',
+			httpMethod: 'POST',
+			responseMode: 'onReceived',
+			path: 'webhook',
+		});
+	});
+
+	it('is not offered as an AI tool', () => {
+		expect(description.usableAsTool).toBeUndefined();
+	});
+});
+
 describe('Sent Trigger lifecycle', () => {
 	const methods = new SentTrigger().webhookMethods.default;
 

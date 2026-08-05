@@ -1,5 +1,8 @@
+import { createHash } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
+import { SentTrigger } from '../nodes/SentTrigger/SentTrigger.node';
 import {
 	computeSentSignature,
 	deriveEventIdempotencyKey,
@@ -85,23 +88,72 @@ describe('Sent webhook signature verification', () => {
 		).toBe('m1:DELIVERED');
 	});
 
-	it('derives a stable hash fallback when the event has no resource ID', () => {
-		expect(deriveEventIdempotencyKey({ field: 'unknown' }, rawBody, '1712345678')).toMatch(
-			/^[a-f0-9]{64}$/,
+	it('derives a body-stable hash fallback when the event has no resource ID', () => {
+		const key = deriveEventIdempotencyKey({ field: 'unknown' }, rawBody);
+
+		// Pinned to the digest of the body ALONE. A looser assertion cannot tell
+		// `sha256(body)` apart from `sha256(body + timestamp)`, and the whole point of
+		// this key is that a Sent redelivery — which is re-signed with a fresh timestamp,
+		// because the original would fall outside the replay window — produces the same
+		// value and is therefore deduplicated.
+		expect(key).toBe(createHash('sha256').update(rawBody).digest('hex'));
+		expect(deriveEventIdempotencyKey({ field: 'unknown' }, Buffer.from('{"other":true}'))).not.toBe(
+			key,
 		);
-		expect(deriveEventIdempotencyKey({ field: 'unknown' }, rawBody, '1712345678')).not.toBe(
-			deriveEventIdempotencyKey({ field: 'unknown' }, rawBody, '1712345679'),
-		);
+	});
+
+	it('emits that same body-stable key through the trigger on redelivery', async () => {
+		const body = Buffer.from('{"field":"unknown","event":"unknown.thing"}');
+		const webhookId = 'wh-redelivery';
+		const secretForRun = secret;
+
+		const deliverAt = async (seconds: string) => {
+			const signature = computeSentSignature(webhookId, seconds, body, secretForRun);
+			const context = {
+				getNode: () => ({ name: 'Sent Trigger', type: 't', typeVersion: 1, position: [0, 0], parameters: {} }),
+				getRequestObject: () => ({
+					rawBody: body,
+					headers: {
+						'x-webhook-id': webhookId,
+						'x-webhook-timestamp': seconds,
+						'x-webhook-signature': signature,
+						'x-webhook-event-type': 'unknown.thing',
+					},
+					readRawBody: async () => body,
+				}),
+				getResponseObject: () => ({ writeHead: () => undefined, end: () => undefined }),
+				getWorkflowStaticData: () => ({ signingSecret: secretForRun, webhookId }),
+			};
+			const result = await new SentTrigger().webhook.call(context as never);
+			return result.workflowData?.[0]?.[0]?.json.idempotencyKey;
+		};
+
+		const now = Math.floor(Date.now() / 1000);
+		// The same event delivered twice, minutes apart, with different valid timestamps.
+		expect(await deliverAt(String(now - 120))).toBe(await deliverAt(String(now)));
 	});
 });
 
 describe('webhook URL validation', () => {
-	it.each(['http://example.com/webhook', 'https://localhost/webhook', 'https://127.0.0.1/hook', 'https://10.0.0.1/hook', 'https://192.168.1.2/hook', 'not-a-url'])(
-		'rejects non-public URL %s',
-		(value) => expect(isPublicWebhookUrl(value)).toBe(false),
-	);
+	it.each([
+		'http://example.com/webhook',
+		'https://localhost/webhook',
+		'https://127.0.0.1/hook',
+		'https://10.0.0.1/hook',
+		'https://192.168.1.2/hook',
+		'https://172.16.0.1/hook',
+		'https://[::1]/hook',
+		'https://0.0.0.0/hook',
+		'https://n8n.local/hook',
+		'not-a-url',
+	])('rejects non-public URL %s', (value) => expect(isPublicWebhookUrl(value)).toBe(false));
 
-	it('accepts a public HTTPS URL', () => {
-		expect(isPublicWebhookUrl('https://n8n.example.com/webhook/sent')).toBe(true);
-	});
+	it.each([
+		'https://n8n.example.com/webhook/sent',
+		// 172.x outside 16-31 is public, and a host merely starting with those digits
+		// must not be mistaken for one.
+		'https://172.15.0.1/hook',
+		'https://172.32.0.1/hook',
+		'https://fdic.gov/hook',
+	])('accepts public URL %s', (value) => expect(isPublicWebhookUrl(value)).toBe(true));
 });

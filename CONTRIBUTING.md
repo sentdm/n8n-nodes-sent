@@ -16,7 +16,11 @@ npm run build
 npm pack --dry-run
 ```
 
-Use `npm run lint:fix` for safe automated lint fixes and `npm run dev` for local n8n testing. Tests must mock Sent responses. Add a regression test for each bug fix and update API/readiness documentation when behavior changes.
+`npm run lint` runs eslint only and does not type-check, so run `npm run build` before assuming a change compiles. Use `npm run lint:fix` for safe automated fixes and `npm run dev` for local n8n testing.
+
+`package-lock.json` is the committed lockfile and is what CI installs from. pnpm works locally, but do not commit a second lockfile.
+
+Tests must mock Sent responses. Adding an operation requires a matching row in `test/operations.test.ts`; the suite fails if the node and that table disagree. Add a regression test for each bug fix and update `docs/verification/api-coverage.md` when coverage changes.
 
 ## Pull requests
 
@@ -24,4 +28,4 @@ Keep changes focused, explain the Sent/n8n source for behavior, list commands ru
 
 ## Releases
 
-Only an authorized maintainer may run `npm run release` and push a version tag. Publication must occur through `.github/workflows/publish.yml`, and the version/tag, provenance, metadata, scanner, and public URLs must be verified afterward.
+Only an authorized maintainer may run `npm run release` and push a version tag. Publication must occur through `.github/workflows/publish.yml`, and the version/tag, provenance, metadata, scanner, and public URLs must be verified afterward. See `docs/verification/submission-checklist.md` for the required ordering, including the one-time bootstrap that must precede the first OIDC publish.

@@ -35,7 +35,7 @@ Repository-local help was read for:
 
 | Requirement | Source | Implementation/evidence | Status |
 | --- | --- | --- | --- |
-| Use official scaffold/CLI | [Build an n8n node](https://docs.n8n.io/integrations/creating-nodes/build/n8n-node/) | Scaffold created via `npm create @n8n/node`; local CLI pinned | Met |
+| Use official scaffold/CLI | [Build an n8n node](https://docs.n8n.io/connect/create-nodes/build-your-node/using-the-n8n-node-tool) | Scaffold created via `npm create @n8n/node`; local CLI pinned | Met |
 | Node.js 22+ | [Official starter](https://github.com/n8n-io/n8n-nodes-starter) | Node `v24.9.0`, `engines.node >=22`, CI Node 22 | Met |
 | Local CLI scripts | Official starter/package scripts | `dev`, `lint`, `lint:fix`, `build`, `release`; direct use via `npx` | Met |
 | MIT license | n8n verification guidance | `license: MIT`, `LICENSE.md`; holder pending confirmation | Partial—human legal confirmation |
@@ -52,7 +52,7 @@ The workspace started empty. A fresh official scaffold was generated outside the
 ## Primary references
 
 - [n8n Creator Portal](https://creators.n8n.io/nodes)
-- [Official node CLI documentation](https://docs.n8n.io/integrations/creating-nodes/build/n8n-node/)
+- [Official node CLI documentation](https://docs.n8n.io/connect/create-nodes/build-your-node/using-the-n8n-node-tool)
 - [Official starter repository](https://github.com/n8n-io/n8n-nodes-starter)
-- [n8n community-node verification guidance](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)
+- [n8n community-node verification guidance](https://docs.n8n.io/connect/create-nodes/deploy-your-node/submit-community-nodes)
 - [Sent API documentation](https://docs.sent.dm)

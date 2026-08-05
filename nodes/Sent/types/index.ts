@@ -39,7 +39,6 @@ export interface SentRequestOptions {
 	query?: IDataObject;
 	body?: IDataObject;
 	idempotencyKey?: string;
-	profileId?: string;
 	itemIndex?: number;
 }
 
@@ -47,20 +46,6 @@ export interface SentHttpResponse {
 	body: unknown;
 	headers: Record<string, string | string[] | undefined>;
 	statusCode: number;
-}
-
-export interface SentAccount extends IDataObject {
-	id?: string;
-	name?: string;
-	type?: 'organization' | 'profile' | 'user';
-}
-
-export interface SentMessage extends IDataObject {
-	id?: string;
-	message_id?: string;
-	status?: string;
-	channel?: string;
-	to?: string;
 }
 
 export interface SentTemplateReference extends IDataObject {
@@ -77,40 +62,6 @@ export interface SentMessageRequest extends IDataObject {
 	sandbox?: boolean;
 }
 
-export interface SentContact extends IDataObject {
-	id?: string;
-	phone_number?: string;
-	default_channel?: string;
-	opt_out?: boolean;
-}
-
-export interface SentTemplate extends IDataObject {
-	id?: string;
-	name?: string;
-	category?: string;
-	status?: string;
-}
-
-export interface SentProfile extends IDataObject {
-	id?: string;
-	name?: string;
-	short_name?: string;
-	status?: string;
-}
-
-export interface SentCampaign extends IDataObject {
-	id?: string;
-	name?: string;
-	status?: string;
-}
-
-export interface SentUser extends IDataObject {
-	id?: string;
-	email?: string;
-	name?: string;
-	role?: string;
-}
-
 export interface SentWebhook extends IDataObject {
 	id?: string;
 	display_name?: string;
@@ -120,16 +71,3 @@ export interface SentWebhook extends IDataObject {
 	event_types?: string[];
 }
 
-export interface SentWebhookEvent extends IDataObject {
-	field?: string;
-	event?: string;
-	timestamp?: string;
-	payload?: IDataObject;
-}
-
-export interface SentNumberLookup extends IDataObject {
-	phone_number?: string;
-	valid?: boolean;
-	line_type?: string;
-	carrier?: string;
-}

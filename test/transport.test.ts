@@ -1,6 +1,31 @@
+import { NodeOperationError } from 'n8n-workflow';
 import { describe, expect, it, vi } from 'vitest';
 
 import { sentApiRequest, sentApiRequestAllItems } from '../nodes/Sent/transport';
+
+// `JSON.stringify(error)` alone cannot see a leak: Error#message and Error#stack are
+// non-enumerable, so the field most likely to carry raw upstream text is invisible to it.
+function errorSurface(error: unknown): string {
+	if (!(error instanceof Error)) return String(error);
+	const fields = error as unknown as Record<string, unknown>;
+	return [
+		error.message,
+		error.stack ?? '',
+		String(fields.description ?? ''),
+		JSON.stringify(fields.cause ?? null),
+		JSON.stringify(fields.context ?? null),
+		JSON.stringify(error),
+	].join('\n');
+}
+
+async function captureError(run: Promise<unknown>): Promise<unknown> {
+	try {
+		await run;
+	} catch (error) {
+		return error;
+	}
+	throw new Error('expected the request to reject');
+}
 
 function contextWithResponses(...responses: unknown[]) {
 	const httpRequestWithAuthentication = vi.fn();
@@ -30,7 +55,7 @@ describe('Sent transport', () => {
 		).resolves.toEqual({ success: true, data: { deleted: true } });
 	});
 
-	it('passes idempotency and profile headers without generating values', async () => {
+	it('passes the idempotency header without generating a value', async () => {
 		const context = contextWithResponses({
 			statusCode: 200,
 			headers: {},
@@ -40,13 +65,24 @@ describe('Sent transport', () => {
 			method: 'POST',
 			path: '/v3/messages',
 			idempotencyKey: 'workflow-item-1',
-			profileId: 'profile-1',
 		});
 		const options = context.helpers.httpRequestWithAuthentication.mock.calls[0][1];
-		expect(options.headers).toMatchObject({
+		expect(options.headers).toEqual({
+			Accept: 'application/json',
 			'Idempotency-Key': 'workflow-item-1',
-			'x-profile-id': 'profile-1',
 		});
+	});
+
+	it('omits the idempotency header when no key is supplied', async () => {
+		const context = contextWithResponses({
+			statusCode: 200,
+			headers: {},
+			body: { success: true, data: {} },
+		});
+		await sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' });
+		const options = context.helpers.httpRequestWithAuthentication.mock.calls[0][1];
+		expect(options.headers).toEqual({ Accept: 'application/json' });
+		expect(options).toMatchObject({ returnFullResponse: true, ignoreHttpStatusErrors: true, json: true });
 	});
 
 	it('preserves safe Sent error context and request ID', async () => {
@@ -70,9 +106,13 @@ describe('Sent transport', () => {
 			headers: { 'retry-after': '60' },
 			body: { success: false, error: { code: 'BUSINESS_002', message: 'Rate limit exceeded' } },
 		});
-		await expect(
-			sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' }),
-		).rejects.toThrow(/Rate limit exceeded/);
+		const surface = errorSurface(
+			await captureError(sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' })),
+		);
+
+		expect(surface).toMatch(/Rate limit exceeded/);
+		// The whole point of the test: the caller must be able to see how long to wait.
+		expect(surface).toContain('Retry-After: 60');
 		expect(context.helpers.httpRequestWithAuthentication).toHaveBeenCalledTimes(1);
 	});
 
@@ -82,14 +122,29 @@ describe('Sent transport', () => {
 	])('normalizes %s without leaking low-level sensitive text', async (_name, failure, message) => {
 		const context = contextWithResponses();
 		context.helpers.httpRequestWithAuthentication.mockRejectedValueOnce(failure);
-		let captured: unknown;
-		try {
-			await sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' });
-		} catch (error) {
-			captured = error;
-		}
+
+		const captured = await captureError(
+			sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' }),
+		);
+
 		expect(String(captured)).toMatch(message);
-		expect(JSON.stringify(captured)).not.toContain('real-looking-secret');
+		expect(errorSurface(captured)).not.toContain('real-looking-secret');
+	});
+
+	it('rethrows an n8n error instead of relabelling it a network failure', async () => {
+		const context = contextWithResponses();
+		const credentialError = new NodeOperationError(
+			{ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} } as never,
+			"Credentials for 'sentApi' could not be found",
+		);
+		context.helpers.httpRequestWithAuthentication.mockRejectedValueOnce(credentialError);
+
+		const captured = await captureError(
+			sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' }),
+		);
+
+		expect(captured).toBe(credentialError);
+		expect(errorSurface(captured)).not.toContain('Network request failed');
 	});
 
 	it('redacts sensitive validation details while preserving the request ID', async () => {
@@ -105,15 +160,18 @@ describe('Sent transport', () => {
 				},
 			},
 		});
-		let serialized = '';
-		try {
-			await sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' });
-		} catch (error) {
-			serialized = JSON.stringify(error);
-		}
-		expect(serialized).toContain('req-auth');
-		expect(serialized).not.toContain('secret-value');
-		expect(serialized).not.toContain('+15555550123');
+
+		const surface = errorSurface(
+			await captureError(sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' })),
+		);
+
+		// Positive assertions first: without them the redaction checks could pass on an
+		// empty string.
+		expect(surface).toContain('req-auth');
+		expect(surface).toContain('Invalid API key');
+		expect(surface).toContain('[REDACTED]');
+		expect(surface).not.toContain('secret-value');
+		expect(surface).not.toContain('+15555550123');
 	});
 
 	it('paginates until has_more is false', async () => {
@@ -130,6 +188,35 @@ describe('Sent transport', () => {
 				100,
 			),
 		).resolves.toEqual([{ id: '1' }, { id: '2' }]);
+	});
+
+	it('keeps page_size constant across pages so a multi-page limit returns distinct rows', async () => {
+		const page = (start: number) =>
+			Array.from({ length: 100 }, (_, offset) => ({ id: String(start + offset) }));
+		const context = contextWithResponses(
+			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: page(1), pagination: { has_more: true } } } },
+			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: page(101), pagination: { has_more: true } } } },
+		);
+
+		const records = await sentApiRequestAllItems.call(
+			context as never,
+			{ method: 'GET', path: '/v3/contacts' },
+			'contacts',
+			false,
+			150,
+		);
+
+		expect(records).toHaveLength(150);
+		expect(new Set(records.map((record) => record.id)).size).toBe(150);
+		expect(records[149]).toEqual({ id: '150' });
+
+		const queries = context.helpers.httpRequestWithAuthentication.mock.calls.map(
+			(call: unknown[]) => (call[1] as { qs: unknown }).qs,
+		);
+		expect(queries).toEqual([
+			{ page: 1, page_size: 100 },
+			{ page: 2, page_size: 100 },
+		]);
 	});
 
 	it('honors a limit smaller than a page', async () => {

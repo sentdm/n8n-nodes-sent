@@ -1,9 +1,0 @@
-{
-  "name": "Sent - List Templates",
-  "nodes": [
-    { "parameters": {}, "id": "manual-5", "name": "Manual Trigger", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [0, 0] },
-    { "parameters": { "resource": "template", "operation": "getMany", "returnAll": false, "limit": 25, "filters": {} }, "id": "sent-5", "name": "List Templates", "type": "@sentdm/n8n-nodes-sent.sent", "typeVersion": 1, "position": [260, 0] }
-  ],
-  "connections": { "Manual Trigger": { "main": [[{ "node": "List Templates", "type": "main", "index": 0 }]] } },
-  "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
-}

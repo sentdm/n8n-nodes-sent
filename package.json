@@ -17,9 +17,6 @@
 		"name": "Sent",
 		"email": "support@sent.dm"
 	},
-	"maintainers": [
-		"Sent maintainers <support@sent.dm>"
-	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/sentdm/n8n-nodes-sent.git"

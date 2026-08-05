@@ -27,12 +27,13 @@ jobs:
       - name: Clean install
         run: npm ci
 
-      - name: Lint and type-check
+      - name: Lint
         run: npm run lint
 
       - name: Test
         run: npm test
 
+      # `n8n-node build` runs tsc, so this is also the type-check.
       - name: Build
         run: npm run build
 
@@ -46,7 +47,10 @@ jobs:
             echo 'Tracked local/generated artifact detected.' >&2
             exit 1
           fi
-          if git grep -nE 'NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized[[:space:]]*:[[:space:]]*false|process\.env|child_process|eval\(' -- credentials nodes package.json ; then
+          # Keep the pathspec as an explicit allowlist of the sources that ship to npm.
+          # An exclusion pathspec such as ':!docs/**' makes git grep scan this workflow
+          # file, whose own pattern list then matches itself and fails every run.
+          if git grep -nE 'NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized[[:space:]]*:[[:space:]]*false|process\.env|child_process|eval\(|<script' -- credentials nodes icons package.json ; then
             echo 'Potentially unsafe runtime construct detected.' >&2
             exit 1
           fi

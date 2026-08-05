@@ -14,21 +14,18 @@ function parameter(context: IExecuteFunctions, name: string, itemIndex: number):
 }
 
 function requestOptions(context: IExecuteFunctions, itemIndex: number): IDataObject {
-	const resource = parameter(context, 'resource', itemIndex);
-	const operation = parameter(context, 'operation', itemIndex);
-	let parameterName = 'requestOptions';
-	if (operation === 'update') {
-		parameterName = resource === 'contact' ? 'contactUpdateOptions' : 'updateOptions';
-	} else if (operation === 'delete') {
-		parameterName = resource === 'webhook' ? 'webhookDeleteOptions' : 'deleteOptions';
-	} else if (operation === 'remove') {
-		parameterName = 'removeOptions';
-	}
-	return context.getNodeParameter(parameterName, itemIndex, {}) as IDataObject;
+	return context.getNodeParameter('requestOptions', itemIndex, {}) as IDataObject;
 }
 
-function scopeId(context: IExecuteFunctions, itemIndex: number, options: IDataObject): string {
-	return String(options.profileScopeId ?? context.getNodeParameter('profileScopeId', itemIndex, ''));
+// Reads a JSON-typed parameter unstringified, so an expression resolving to an object
+// reaches parseJsonInput as an object rather than as "[object Object]".
+function jsonParameter(
+	context: IExecuteFunctions,
+	name: string,
+	itemIndex: number,
+	fieldName: string,
+): IDataObject {
+	return parseJsonInput(context.getNodeParameter(name, itemIndex, ''), fieldName, context.getNode());
 }
 
 function baseRequest(
@@ -56,7 +53,6 @@ function baseRequest(
 		path,
 		body: body ? compactObject({ ...body, ...(sandbox ? { sandbox: true } : {}) }) : undefined,
 		idempotencyKey,
-		profileId: scopeId(context, itemIndex, options),
 		itemIndex,
 	};
 }
@@ -109,20 +105,27 @@ export function buildOperation(
 				to: recipients,
 				channel: selectedChannels.length > 0 ? selectedChannels : ['sent'],
 			};
+			// `required: true` is an editor-time check on the stored value, so an expression
+			// that resolves to '' still reaches here. compactObject would then strip the
+			// field and post a message with no content at all.
 			if (messageType === 'text') {
-				body.text = parameter(context, 'text', itemIndex);
+				const text = parameter(context, 'text', itemIndex);
+				if (!text) {
+					throw new NodeOperationError(context.getNode(), 'Text is required', { itemIndex });
+				}
+				body.text = text;
 			} else {
 				const locator = context.getNodeParameter('messageTemplate', itemIndex) as {
 					mode: 'id' | 'list' | 'name';
 					value: string;
 				};
+				const template = String(locator.value ?? '').trim();
+				if (!template) {
+					throw new NodeOperationError(context.getNode(), 'Template is required', { itemIndex });
+				}
 				body.template = compactObject({
-					[locator.mode === 'name' ? 'name' : 'id']: locator.value,
-					parameters: parseJsonInput(
-						parameter(context, 'templateParameters', itemIndex),
-						'Template Parameters',
-						context.getNode(),
-					),
+					[locator.mode === 'name' ? 'name' : 'id']: template,
+					parameters: jsonParameter(context, 'templateParameters', itemIndex, 'Template Parameters'),
 				});
 			}
 			return baseRequest(context, itemIndex, 'POST', '/v3/messages', body);
@@ -130,28 +133,11 @@ export function buildOperation(
 	}
 
 	if (resource === 'contact') {
-		if (operation === 'create') {
-			return baseRequest(context, itemIndex, 'POST', '/v3/contacts', {
-				phone_number: parameter(context, 'phoneNumber', itemIndex),
-			});
-		}
+		// `getMany` renders no Contact ID field, so it must resolve before identifier().
+		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/contacts'), query: filters(context, itemIndex), collectionKey: 'contacts', paginated: true };
 		const contactId = identifier(context, itemIndex, 'contactId');
 		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `/v3/contacts/${contactId}`, {});
 		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/contacts/${contactId}`);
-		if (operation === 'getMessageSummary') return baseRequest(context, itemIndex, 'GET', `/v3/contacts/${contactId}/message-summary`);
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/contacts'), query: filters(context, itemIndex), collectionKey: 'contacts', paginated: true };
-		if (operation === 'update') {
-			const options = requestOptions(context, itemIndex);
-			return baseRequest(context, itemIndex, 'PATCH', `/v3/contacts/${contactId}`, {
-				default_channel: options.defaultChannel,
-				opt_out: options.optOut,
-			});
-		}
-	}
-
-	if (resource === 'conversation') {
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/conversations'), collectionKey: 'messages', paginated: true };
-		if (operation === 'getMessages') return { ...baseRequest(context, itemIndex, 'GET', `/v3/conversations/${identifier(context, itemIndex, 'conversationId')}`), collectionKey: 'messages', paginated: true };
 	}
 
 	if (resource === 'numberLookup') {
@@ -163,7 +149,7 @@ export function buildOperation(
 		const root = `/v3/profiles/${profileId}/campaigns`;
 		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', root), collectionKey: 'campaigns' };
 		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `${root}/${identifier(context, itemIndex, 'campaignId')}`, {});
-		const campaign = parseJsonInput(parameter(context, 'campaignJson', itemIndex), 'Campaign JSON', context.getNode());
+		const campaign = jsonParameter(context, 'campaignJson', itemIndex, 'Campaign JSON');
 		if (operation === 'create') return baseRequest(context, itemIndex, 'POST', root, { campaign });
 		if (operation === 'update') return baseRequest(context, itemIndex, 'PUT', `${root}/${identifier(context, itemIndex, 'campaignId')}`, { campaign });
 	}
@@ -173,17 +159,27 @@ export function buildOperation(
 		if (operation === 'create') {
 			return baseRequest(context, itemIndex, 'POST', '/v3/profiles', {
 				name: parameter(context, 'name', itemIndex),
-				...parseJsonInput(parameter(context, 'additionalFieldsJson', itemIndex), 'Additional Fields JSON', context.getNode()),
+				...jsonParameter(context, 'additionalFieldsJson', itemIndex, 'Additional Fields JSON'),
 			});
 		}
 		const profileId = identifier(context, itemIndex, 'profileId');
 		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `/v3/profiles/${profileId}`, {});
 		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/profiles/${profileId}`);
 		if (operation === 'complete') return baseRequest(context, itemIndex, 'POST', `/v3/profiles/${profileId}/complete`, { webHookUrl: parameter(context, 'webhookUrl', itemIndex) });
-		if (operation === 'update') return baseRequest(context, itemIndex, 'PATCH', `/v3/profiles/${profileId}`, {
-			name: parameter(context, 'name', itemIndex),
-			...parseJsonInput(parameter(context, 'additionalFieldsJson', itemIndex), 'Additional Fields JSON', context.getNode()),
-		});
+		if (operation === 'update') {
+			const fields = compactObject({
+				name: parameter(context, 'name', itemIndex),
+				...jsonParameter(context, 'additionalFieldsJson', itemIndex, 'Additional Fields JSON'),
+			});
+			if (Object.keys(fields).length === 0) {
+				throw new NodeOperationError(
+					context.getNode(),
+					'Profile Update needs at least one field to change. Set Name, or add fields to Additional Fields JSON.',
+					{ itemIndex },
+				);
+			}
+			return baseRequest(context, itemIndex, 'PATCH', `/v3/profiles/${profileId}`, fields);
+		}
 	}
 
 	if (resource === 'template') {
@@ -191,7 +187,7 @@ export function buildOperation(
 		if (operation === 'create') return baseRequest(context, itemIndex, 'POST', '/v3/templates', {
 			category: parameter(context, 'category', itemIndex),
 			language: parameter(context, 'language', itemIndex),
-			definition: parseJsonInput(parameter(context, 'definitionJson', itemIndex), 'Definition JSON', context.getNode()),
+			definition: jsonParameter(context, 'definitionJson', itemIndex, 'Definition JSON'),
 			creation_source: parameter(context, 'creationSource', itemIndex),
 			submit_for_review: context.getNodeParameter('submitForReview', itemIndex, false) as boolean,
 		});
@@ -202,7 +198,7 @@ export function buildOperation(
 			name: parameter(context, 'name', itemIndex),
 			category: parameter(context, 'category', itemIndex),
 			language: parameter(context, 'language', itemIndex),
-			definition: parseJsonInput(parameter(context, 'definitionJson', itemIndex), 'Definition JSON', context.getNode()),
+			definition: jsonParameter(context, 'definitionJson', itemIndex, 'Definition JSON'),
 			submit_for_review: context.getNodeParameter('submitForReview', itemIndex, false) as boolean,
 		});
 	}
@@ -247,7 +243,7 @@ function webhookBody(context: IExecuteFunctions, itemIndex: number): IDataObject
 		display_name: parameter(context, 'displayName', itemIndex),
 		endpoint_url: parameter(context, 'endpointUrl', itemIndex),
 		event_types: context.getNodeParameter('eventTypes', itemIndex, ['message']) as string[],
-		event_filters: parseJsonInput(parameter(context, 'eventFiltersJson', itemIndex), 'Event Filters JSON', context.getNode()),
+		event_filters: jsonParameter(context, 'eventFiltersJson', itemIndex, 'Event Filters JSON'),
 		retry_count: context.getNodeParameter('retryCount', itemIndex, 3) as number,
 		timeout_seconds: context.getNodeParameter('timeoutSeconds', itemIndex, 30) as number,
 	});

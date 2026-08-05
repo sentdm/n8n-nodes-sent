@@ -1,9 +1,0 @@
-{
-  "name": "Sent - Send Sandbox Message",
-  "nodes": [
-    { "parameters": {}, "id": "manual-1", "name": "Manual Trigger", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [0, 0] },
-    { "parameters": { "resource": "message", "operation": "send", "recipients": "+15555550123", "channels": ["sent"], "messageType": "text", "text": "Sandbox message from n8n", "requestOptions": { "sandbox": true, "idempotencyKey": "={{$execution.id + '-' + $itemIndex}}" } }, "id": "sent-1", "name": "Send Sandbox Message", "type": "@sentdm/n8n-nodes-sent.sent", "typeVersion": 1, "position": [260, 0] }
-  ],
-  "connections": { "Manual Trigger": { "main": [[{ "node": "Send Sandbox Message", "type": "main", "index": 0 }]] } },
-  "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
-}

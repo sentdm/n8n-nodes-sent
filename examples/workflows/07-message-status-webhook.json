@@ -1,9 +1,0 @@
-{
-  "name": "Sent - Message Status Webhook",
-  "nodes": [
-    { "parameters": { "eventTypes": ["message"], "messageSubtypes": ["delivered", "failed", "read", "sent"], "options": { "retryCount": 3, "timeoutSeconds": 30 } }, "id": "trigger-7", "name": "Sent Message Status", "type": "@sentdm/n8n-nodes-sent.sentTrigger", "typeVersion": 1, "position": [0, 0] },
-    { "parameters": { "assignments": { "assignments": [{ "id": "status", "name": "messageStatus", "value": "={{$json.payload.message_status}}", "type": "string" }] }, "options": {} }, "id": "edit-7", "name": "Use Verified Status", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [260, 0] }
-  ],
-  "connections": { "Sent Message Status": { "main": [[{ "node": "Use Verified Status", "type": "main", "index": 0 }]] } },
-  "pinData": {}, "active": false, "settings": { "executionOrder": "v1" }, "tags": []
-}

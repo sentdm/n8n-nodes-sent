@@ -5,3 +5,8 @@ node_modules
 .env.*
 coverage
 *.tgz
+
+# package-lock.json is the committed lockfile and is what both CI workflows install from.
+# pnpm works locally, but its lockfile is not tracked so the two cannot silently diverge.
+pnpm-lock.yaml
+pnpm-workspace.yaml

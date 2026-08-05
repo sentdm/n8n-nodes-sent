@@ -2,21 +2,17 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and Semantic Versioning.
 
-## [Unreleased]
+## [0.1.0] - 2026-08-05
 
-- Replace placeholder icons with approved Sent brand assets.
-- Confirm maintainer contact.
-- Complete live credential, webhook, publication, provenance, scanner, and Creator Portal checks.
-
-## [0.1.0] - 2026-08-04
+Initial release.
 
 ### Added
 
-- Sent API credential with `x-api-key` authentication and `/v3/me` test.
-- Sent action node covering all 43 stable public v3 method/path operations found during research.
-- Sent Trigger lifecycle with raw-body HMAC verification and replay protection.
-- Shared typed transport, pagination, safe errors, sandbox, and idempotency support.
-- Automated tests, examples, CI, provenance publishing workflow, and verification documentation.
+- Sent API credential with `x-api-key` authentication and a `GET /v3/me` credential test.
+- Sent action node covering 38 stable public Sent API v3 method/path operations across Account, Message, Contact, Template, Profile, Brand Campaign, User, Webhook, and Number Lookup.
+- Sent Trigger with webhook registration, raw-body HMAC-SHA256 verification, a ±300-second replay window, and deregistration on deactivation.
+- Shared typed transport with page-number pagination, redacted error reporting, sandbox, and idempotency support.
+- Square Sent brand icons for the light and dark n8n themes, on the nodes and on the credential.
+- 148 unit tests, importable example workflows, CI quality gates, and a provenance publishing workflow.
 
-[Unreleased]: https://github.com/sentdm/n8n-nodes-sent/compare/0.1.0...HEAD
 [0.1.0]: https://github.com/sentdm/n8n-nodes-sent/releases/tag/0.1.0

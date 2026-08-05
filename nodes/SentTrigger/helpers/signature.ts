@@ -73,11 +73,7 @@ export function verifySentSignature(input: SignatureInput): SignatureResult {
 	}
 }
 
-export function deriveEventIdempotencyKey(
-	event: IDataObject,
-	rawBody: Buffer,
-	webhookTimestamp?: string,
-): string {
+export function deriveEventIdempotencyKey(event: IDataObject, rawBody: Buffer): string {
 	const payload =
 		typeof event.payload === 'object' && event.payload !== null
 			? (event.payload as IDataObject)
@@ -90,19 +86,22 @@ export function deriveEventIdempotencyKey(
 	if (typeof payload.template_id === 'string') {
 		return `${payload.template_id}:${String(payload.status ?? eventType)}`;
 	}
-	return createHash('sha256')
-		.update(rawBody)
-		.update('.')
-		.update(webhookTimestamp ?? '')
-		.digest('hex');
+	// Hash the body alone. Sent re-signs a retry with a fresh timestamp, because an
+	// original one would fall outside the replay window, so folding the timestamp into
+	// the key would change it on exactly the redeliveries this key exists to collapse.
+	return createHash('sha256').update(rawBody).digest('hex');
 }
 
 export function isPublicWebhookUrl(value: string): boolean {
 	try {
 		const url = new URL(value);
 		if (url.protocol !== 'https:') return false;
-		const host = url.hostname.toLowerCase();
-		if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return false;
+		// WHATWG URL keeps an IPv6 literal bracketed, so a bare '::1' comparison never
+		// matches url.hostname.
+		const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+		if (host === 'localhost' || host === '::1' || host === '0.0.0.0' || host.endsWith('.local')) {
+			return false;
+		}
 		if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) return false;
 		const private172 = /^172\.(\d+)\./.exec(host);
 		if (private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31) return false;
