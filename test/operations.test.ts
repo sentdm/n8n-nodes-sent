@@ -24,15 +24,6 @@ interface Row {
 	};
 }
 
-const webhookFields = {
-	displayName: 'n8n',
-	endpointUrl: 'https://n8n.example.com/webhook/sent',
-	eventTypes: ['message'],
-	eventFiltersJson: '{}',
-	retryCount: 3,
-	timeoutSeconds: 30,
-};
-
 // One row per operation the node declares. The coverage test below fails if the two
 // ever drift apart, so a new operation cannot ship without a method/path assertion.
 const matrix: Row[] = [
@@ -47,22 +38,6 @@ const matrix: Row[] = [
 
 	{ resource: 'numberLookup', operation: 'lookup', parameters: { phoneNumber: '+14155550123' }, expected: { method: 'GET', path: '/v3/numbers/lookup/%2B14155550123' } },
 
-	{ resource: 'campaign', operation: 'create', parameters: { profileId: 'p1', campaignJson: '{"name":"c"}' }, expected: { method: 'POST', path: '/v3/profiles/p1/campaigns' } },
-	{ resource: 'campaign', operation: 'delete', parameters: { profileId: 'p1', campaignId: 'cmp1' }, expected: { method: 'DELETE', path: '/v3/profiles/p1/campaigns/cmp1' } },
-	{ resource: 'campaign', operation: 'getMany', parameters: { profileId: 'p1' }, expected: { method: 'GET', path: '/v3/profiles/p1/campaigns', collectionKey: 'campaigns' } },
-	{ resource: 'campaign', operation: 'update', parameters: { profileId: 'p1', campaignId: 'cmp1', campaignJson: '{"name":"c"}' }, expected: { method: 'PUT', path: '/v3/profiles/p1/campaigns/cmp1' } },
-
-
-	{ resource: 'webhook', operation: 'create', parameters: webhookFields, expected: { method: 'POST', path: '/v3/webhooks' } },
-	{ resource: 'webhook', operation: 'delete', parameters: { webhookId: 'w1' }, expected: { method: 'DELETE', path: '/v3/webhooks/w1' } },
-	{ resource: 'webhook', operation: 'get', parameters: { webhookId: 'w1' }, expected: { method: 'GET', path: '/v3/webhooks/w1' } },
-	{ resource: 'webhook', operation: 'getEventTypes', parameters: {}, expected: { method: 'GET', path: '/v3/webhooks/event-types' } },
-	{ resource: 'webhook', operation: 'getEvents', parameters: { webhookId: 'w1' }, expected: { method: 'GET', path: '/v3/webhooks/w1/events', collectionKey: 'events', paginated: true } },
-	{ resource: 'webhook', operation: 'getMany', parameters: {}, expected: { method: 'GET', path: '/v3/webhooks', collectionKey: 'webhooks', paginated: true } },
-	{ resource: 'webhook', operation: 'rotateSecret', parameters: { webhookId: 'w1' }, expected: { method: 'POST', path: '/v3/webhooks/w1/rotate-secret' } },
-	{ resource: 'webhook', operation: 'test', parameters: { webhookId: 'w1', eventType: 'message.sent' }, expected: { method: 'POST', path: '/v3/webhooks/w1/test' } },
-	{ resource: 'webhook', operation: 'toggleStatus', parameters: { webhookId: 'w1', isActive: true }, expected: { method: 'PATCH', path: '/v3/webhooks/w1/toggle-status' } },
-	{ resource: 'webhook', operation: 'update', parameters: { webhookId: 'w1', ...webhookFields }, expected: { method: 'PUT', path: '/v3/webhooks/w1' } },
 ];
 
 function declaredOperations(): string[] {
@@ -124,10 +99,24 @@ describe('Sent operation matrix', () => {
 		['profile', 'get'],
 		['profile', 'getMany'],
 		['profile', 'update'],
+		['campaign', 'create'],
+		['campaign', 'delete'],
+		['campaign', 'getMany'],
+		['campaign', 'update'],
+		['webhook', 'create'],
+		['webhook', 'delete'],
+		['webhook', 'get'],
+		['webhook', 'getEventTypes'],
+		['webhook', 'getEvents'],
+		['webhook', 'getMany'],
+		['webhook', 'rotateSecret'],
+		['webhook', 'test'],
+		['webhook', 'toggleStatus'],
+		['webhook', 'update'],
 	])('rejects the removed operation %s.%s', (resource, operation) => {
 		expect(() =>
 			buildOperation(
-				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1', templateId: 't1', userId: 'u1', profileId: 'p1' }) as never,
+				executeContext({ contactId: 'c1', conversationId: 'v1', phoneNumber: '+1', templateId: 't1', userId: 'u1', profileId: 'p1', campaignId: 'cmp1', webhookId: 'w1' }) as never,
 				0,
 				resource,
 				operation,
@@ -137,29 +126,23 @@ describe('Sent operation matrix', () => {
 });
 
 describe('Sent operation request bodies', () => {
-	it('sends no body or idempotency key for Webhook Delete', () => {
-		const request = buildOperation(
-			executeContext({ webhookId: 'w1', requestOptions: { sandbox: true, idempotencyKey: 'k1' } }) as never,
-			0,
-			'webhook',
-			'delete',
-		);
-
-		expect(request.body).toBeUndefined();
-		expect(request.idempotencyKey).toBeUndefined();
-	});
 
 	it('adds sandbox to the body of a mutation that supports it', () => {
 		const request = buildOperation(
-			executeContext({ profileId: 'p1', campaignId: 'cmp1', requestOptions: { sandbox: true } }) as never,
+			executeContext({
+				recipients: '+14155550123',
+				channels: ['sent'],
+				messageType: 'text',
+				text: 'Hello',
+				requestOptions: { sandbox: true },
+			}) as never,
 			0,
-			'campaign',
-			'delete',
+			'message',
+			'send',
 		);
 
-		expect(request.body).toEqual({ sandbox: true });
+		expect(request.body).toMatchObject({ sandbox: true });
 	});
-
 
 	it('accepts an object-valued expression result for a JSON parameter', () => {
 		const request = buildOperation(
@@ -209,23 +192,31 @@ describe('Sent operation request bodies', () => {
 	it('reports a wrong JSON shape as a shape problem, not a parse problem', () => {
 		expect(() =>
 			buildOperation(
-				executeContext({ profileId: 'p1', campaignId: 'c1', campaignJson: '["not","an","object"]' }) as never,
+				executeContext({
+					recipients: '+1', channels: ['sent'], messageType: 'template',
+					messageTemplate: { mode: 'id', value: 't1' },
+					templateParameters: '["not","an","object"]',
+				}) as never,
 				0,
-				'campaign',
-				'update',
+				'message',
+				'send',
 			),
-		).toThrow(/Campaign JSON must contain a JSON object/);
+		).toThrow(/Template Parameters must contain a JSON object/);
 	});
 
 	it('reports malformed JSON text as a parse problem', () => {
 		expect(() =>
 			buildOperation(
-				executeContext({ profileId: 'p1', campaignId: 'c1', campaignJson: '{oops' }) as never,
+				executeContext({
+					recipients: '+1', channels: ['sent'], messageType: 'template',
+					messageTemplate: { mode: 'id', value: 't1' },
+					templateParameters: '{oops',
+				}) as never,
 				0,
-				'campaign',
-				'update',
+				'message',
+				'send',
 			),
-		).toThrow(/Campaign JSON is not valid JSON/);
+		).toThrow(/Template Parameters is not valid JSON/);
 	});
 
 	it('URL-encodes an identifier that contains path characters', () => {
@@ -239,14 +230,12 @@ describe('Sent operation request bodies', () => {
 		expect(request.path).toBe('/v3/contacts/a%2Fb%3Fc');
 	});
 
-	it.each(['contactId', 'messageId', 'profileId', 'webhookId'])(
+	it.each(['contactId', 'messageId'])(
 		'requires %s before making a request',
 		(field) => {
 			const byField: Record<string, [string, string]> = {
 				contactId: ['contact', 'get'],
 				messageId: ['message', 'get'],
-				profileId: ['campaign', 'getMany'],
-				webhookId: ['webhook', 'get'],
 			};
 			const [resource, operation] = byField[field];
 			expect(() => buildOperation(executeContext({}) as never, 0, resource, operation)).toThrow(

@@ -69,7 +69,6 @@ function filters(context: IExecuteFunctions, itemIndex: number): IDataObject {
 		search: value.search,
 		channel: value.channel,
 		phone: value.phone,
-		is_active: value.isActive,
 	});
 }
 
@@ -140,45 +139,6 @@ export function buildOperation(
 		return baseRequest(context, itemIndex, 'GET', `/v3/numbers/lookup/${identifier(context, itemIndex, 'phoneNumber')}`);
 	}
 
-	if (resource === 'campaign') {
-		const profileId = identifier(context, itemIndex, 'profileId');
-		const root = `/v3/profiles/${profileId}/campaigns`;
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', root), collectionKey: 'campaigns' };
-		if (operation === 'delete') return baseRequest(context, itemIndex, 'DELETE', `${root}/${identifier(context, itemIndex, 'campaignId')}`, {});
-		const campaign = jsonParameter(context, 'campaignJson', itemIndex, 'Campaign JSON');
-		if (operation === 'create') return baseRequest(context, itemIndex, 'POST', root, { campaign });
-		if (operation === 'update') return baseRequest(context, itemIndex, 'PUT', `${root}/${identifier(context, itemIndex, 'campaignId')}`, { campaign });
-	}
-
-	if (resource === 'webhook') {
-		if (operation === 'getEventTypes') return baseRequest(context, itemIndex, 'GET', '/v3/webhooks/event-types');
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/webhooks'), query: filters(context, itemIndex), collectionKey: 'webhooks', paginated: true };
-		if (operation === 'create') return baseRequest(context, itemIndex, 'POST', '/v3/webhooks', webhookBody(context, itemIndex));
-		const webhookId = identifier(context, itemIndex, 'webhookId');
-		if (operation === 'delete') {
-			const request = baseRequest(context, itemIndex, 'DELETE', `/v3/webhooks/${webhookId}`);
-			request.body = undefined;
-			request.idempotencyKey = undefined;
-			return request;
-		}
-		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/webhooks/${webhookId}`);
-		if (operation === 'getEvents') return { ...baseRequest(context, itemIndex, 'GET', `/v3/webhooks/${webhookId}/events`), query: filters(context, itemIndex), collectionKey: 'events', paginated: true };
-		if (operation === 'rotateSecret') return baseRequest(context, itemIndex, 'POST', `/v3/webhooks/${webhookId}/rotate-secret`, {});
-		if (operation === 'test') return baseRequest(context, itemIndex, 'POST', `/v3/webhooks/${webhookId}/test`, { event_type: parameter(context, 'eventType', itemIndex) });
-		if (operation === 'toggleStatus') return baseRequest(context, itemIndex, 'PATCH', `/v3/webhooks/${webhookId}/toggle-status`, { is_active: context.getNodeParameter('isActive', itemIndex) as boolean });
-		if (operation === 'update') return baseRequest(context, itemIndex, 'PUT', `/v3/webhooks/${webhookId}`, webhookBody(context, itemIndex));
-	}
-
 	throw new NodeOperationError(context.getNode(), `Unsupported Sent operation: ${resource}.${operation}`, { itemIndex });
 }
 
-function webhookBody(context: IExecuteFunctions, itemIndex: number): IDataObject {
-	return compactObject({
-		display_name: parameter(context, 'displayName', itemIndex),
-		endpoint_url: parameter(context, 'endpointUrl', itemIndex),
-		event_types: context.getNodeParameter('eventTypes', itemIndex, ['message']) as string[],
-		event_filters: jsonParameter(context, 'eventFiltersJson', itemIndex, 'Event Filters JSON'),
-		retry_count: context.getNodeParameter('retryCount', itemIndex, 3) as number,
-		timeout_seconds: context.getNodeParameter('timeoutSeconds', itemIndex, 30) as number,
-	});
-}

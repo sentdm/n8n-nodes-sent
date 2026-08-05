@@ -2,24 +2,18 @@ import type { INodeProperties } from 'n8n-workflow';
 
 const resourceOptions = [
 	{ name: 'Account', value: 'account' },
-	{ name: 'Brand Campaign', value: 'campaign' },
 	{ name: 'Contact', value: 'contact' },
 	{ name: 'Message', value: 'message' },
 	{ name: 'Number Lookup', value: 'numberLookup' },
-	{ name: 'Webhook', value: 'webhook' },
 ];
 
 const operations: Record<string, Array<{ name: string; value: string; action: string }>> = {
 	account: [{ name: 'Get', value: 'get', action: 'Get authenticated account' }],
-	campaign: [
-		{ name: 'Create', value: 'create', action: 'Create a brand campaign' },
-		{ name: 'Delete', value: 'delete', action: 'Delete a brand campaign' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many brand campaigns' },
-		{ name: 'Update', value: 'update', action: 'Update a brand campaign' },
-	],
 	contact: [
-		{ name: 'Get', value: 'get', action: 'Get a contact' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many contacts' },
+		// The UX guidelines allow dropping "Many" ("Get Many Rows" can be "Get Rows"), so
+		// the two stay distinct operations without the redundant word.
+		{ name: 'Get Contact', value: 'get', action: 'Get contact' },
+		{ name: 'Get Contacts', value: 'getMany', action: 'Get contacts' },
 	],
 	message: [
 		{ name: 'Get', value: 'get', action: 'Get a message' },
@@ -27,18 +21,6 @@ const operations: Record<string, Array<{ name: string; value: string; action: st
 		{ name: 'Send', value: 'send', action: 'Send a message' },
 	],
 	numberLookup: [{ name: 'Lookup', value: 'lookup', action: 'Look up a phone number' }],
-	webhook: [
-		{ name: 'Create', value: 'create', action: 'Create a webhook' },
-		{ name: 'Delete', value: 'delete', action: 'Delete a webhook' },
-		{ name: 'Get', value: 'get', action: 'Get a webhook' },
-		{ name: 'Get Event Types', value: 'getEventTypes', action: 'Get webhook event types' },
-		{ name: 'Get Events', value: 'getEvents', action: 'Get webhook events' },
-		{ name: 'Get Many', value: 'getMany', action: 'Get many webhooks' },
-		{ name: 'Rotate Signing Secret', value: 'rotateSecret', action: 'Rotate a webhook signing secret' },
-		{ name: 'Test', value: 'test', action: 'Test a webhook' },
-		{ name: 'Toggle Status', value: 'toggleStatus', action: 'Toggle a webhook status' },
-		{ name: 'Update', value: 'update', action: 'Update a webhook' },
-	],
 };
 
 const mutationOptions: INodeProperties[] = [
@@ -47,14 +29,16 @@ const mutationOptions: INodeProperties[] = [
 		name: 'idempotencyKey',
 		type: 'string',
 		default: '',
-		description: '1-255 letters, numbers, hyphens, or underscores. Reuse the same key when retrying.',
+		description:
+			'1-255 letters, numbers, hyphens, or underscores. Reuse the same key when retrying.',
 	},
 	{
 		displayName: 'Sandbox',
 		name: 'sandbox',
 		type: 'boolean',
 		default: false,
-		description: 'Whether Sent should validate and simulate this supported mutation without side effects',
+		description:
+			'Whether Sent should validate and simulate this supported mutation without side effects',
 	},
 ];
 
@@ -75,30 +59,6 @@ const idFields: INodeProperties[] = [
 		default: '',
 		displayOptions: { show: { resource: ['message'], operation: ['get', 'getActivities'] } },
 	},
-	{
-		displayName: 'Profile ID',
-		name: 'profileId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['campaign'], operation: ['create', 'delete', 'getMany', 'update'] } },
-	},
-	{
-		displayName: 'Campaign ID',
-		name: 'campaignId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['campaign'], operation: ['delete', 'update'] } },
-	},
-	{
-		displayName: 'Webhook ID',
-		name: 'webhookId',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { resource: ['webhook'], operation: ['delete', 'get', 'getEvents', 'rotateSecret', 'test', 'toggleStatus', 'update'] } },
-	},
 ];
 
 const paginationFields: INodeProperties[] = [
@@ -109,8 +69,8 @@ const paginationFields: INodeProperties[] = [
 		default: false,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'webhook'],
-				operation: ['getMany', 'getEvents'],
+				resource: ['contact'],
+				operation: ['getMany'],
 			},
 		},
 		description: 'Whether to return all results or only up to a given limit',
@@ -123,8 +83,8 @@ const paginationFields: INodeProperties[] = [
 		default: 50,
 		displayOptions: {
 			show: {
-				resource: ['contact', 'webhook'],
-				operation: ['getMany', 'getEvents'],
+				resource: ['contact'],
+				operation: ['getMany'],
 				returnAll: [false],
 			},
 		},
@@ -185,7 +145,8 @@ export const sentProperties: INodeProperties[] = [
 		],
 		default: ['sent'],
 		displayOptions: { show: { resource: ['message'], operation: ['send'] } },
-		description: 'Sent uses automatic routing. Several explicit channels create a broadcast, not a fallback order.',
+		description:
+			'Sent uses automatic routing. Several explicit channels create a broadcast, not a fallback order.',
 	},
 	{
 		displayName: 'Message Type',
@@ -205,11 +166,18 @@ export const sentProperties: INodeProperties[] = [
 		default: { mode: 'list', value: '' },
 		required: true,
 		modes: [
-			{ displayName: 'From List', name: 'list', type: 'list', typeOptions: { searchListMethod: 'getTemplates', searchable: true } },
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'getTemplates', searchable: true },
+			},
 			{ displayName: 'ID', name: 'id', type: 'string' },
 			{ displayName: 'Name', name: 'name', type: 'string' },
 		],
-		displayOptions: { show: { resource: ['message'], operation: ['send'], messageType: ['template'] } },
+		displayOptions: {
+			show: { resource: ['message'], operation: ['send'], messageType: ['template'] },
+		},
 		description: 'Template name or ID to use',
 	},
 	{
@@ -217,7 +185,9 @@ export const sentProperties: INodeProperties[] = [
 		name: 'templateParameters',
 		type: 'json',
 		default: '{}',
-		displayOptions: { show: { resource: ['message'], operation: ['send'], messageType: ['template'] } },
+		displayOptions: {
+			show: { resource: ['message'], operation: ['send'], messageType: ['template'] },
+		},
 		description: 'JSON object whose keys match the template variables',
 	},
 	{
@@ -229,79 +199,6 @@ export const sentProperties: INodeProperties[] = [
 		default: '',
 		displayOptions: { show: { resource: ['message'], operation: ['send'], messageType: ['text'] } },
 	},
-	{
-		displayName: 'Campaign JSON',
-		name: 'campaignJson',
-		type: 'json',
-		default: '{}',
-		displayOptions: { show: { resource: ['campaign'], operation: ['create', 'update'] } },
-		description: 'Campaign object following the Sent brand campaign schema',
-	},
-	{
-		displayName: 'Display Name',
-		name: 'displayName',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-	},
-	{
-		displayName: 'Endpoint URL',
-		name: 'endpointUrl',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-	},
-	{
-		displayName: 'Event Types',
-		name: 'eventTypes',
-		type: 'multiOptions',
-		options: [
-			{ name: 'Message', value: 'message' },
-			{ name: 'Templates', value: 'templates' },
-		],
-		default: ['message'],
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-	},
-	{
-		displayName: 'Event Filters JSON',
-		name: 'eventFiltersJson',
-		type: 'json',
-		default: '{}',
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-		description: 'Optional parent-to-subtype map, for example {"message":["delivered","failed"]}',
-	},
-	{
-		displayName: 'Retry Count',
-		name: 'retryCount',
-		type: 'number',
-		typeOptions: { minValue: 1, maxValue: 5 },
-		default: 3,
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-		description: 'Number of delivery attempts per event',
-	},
-	{
-		displayName: 'Timeout Seconds',
-		name: 'timeoutSeconds',
-		type: 'number',
-		typeOptions: { minValue: 5, maxValue: 120 },
-		default: 30,
-		displayOptions: { show: { resource: ['webhook'], operation: ['create', 'update'] } },
-		description: 'Maximum time Sent waits for the endpoint response',
-	},
-	{
-		displayName: 'Event Type',
-		name: 'eventType',
-		type: 'string',
-		default: 'message.sent',
-		displayOptions: { show: { resource: ['webhook'], operation: ['test'] } },
-	},
-	{
-		displayName: 'Is Active',
-		name: 'isActive',
-		type: 'boolean',
-		default: true,
-		displayOptions: { show: { resource: ['webhook'], operation: ['toggleStatus'] } },
-	},
 	...paginationFields,
 	{
 		displayName: 'Filters',
@@ -311,36 +208,21 @@ export const sentProperties: INodeProperties[] = [
 		default: {},
 		displayOptions: { show: { resource: ['contact'], operation: ['getMany'] } },
 		options: [
-			{ displayName: 'Channel', name: 'channel', type: 'options', options: [{ name: 'SMS', value: 'sms' }, { name: 'WhatsApp', value: 'whatsapp' }], default: 'sms' },
+			{
+				displayName: 'Channel',
+				name: 'channel',
+				type: 'options',
+				options: [
+					{ name: 'SMS', value: 'sms' },
+					{ name: 'WhatsApp', value: 'whatsapp' },
+				],
+				default: 'sms',
+			},
 			{ displayName: 'Phone', name: 'phone', type: 'string', default: '' },
 			{ displayName: 'Search', name: 'search', type: 'string', default: '' },
 		],
 	},
-	{
-		displayName: 'Filters',
-		name: 'filters',
-		type: 'collection',
-		placeholder: 'Add Filter',
-		default: {},
-		displayOptions: { show: { resource: ['webhook'], operation: ['getMany'] } },
-		options: [
-			{ displayName: 'Is Active', name: 'isActive', type: 'boolean', default: true },
-			{ displayName: 'Search', name: 'search', type: 'string', default: '' },
-		],
-	},
-	{
-		displayName: 'Filters',
-		name: 'filters',
-		type: 'collection',
-		placeholder: 'Add Filter',
-		default: {},
-		displayOptions: { show: { resource: ['webhook'], operation: ['getEvents'] } },
-		options: [{ displayName: 'Search', name: 'search', type: 'string', default: '' }],
-	},
-	// One Options collection covers every mutation. It is declared twice under the
-	// same name because `Webhook → Delete` documents neither sandbox nor idempotency
-	// support, and n8n hides a parameter as soon as *any* `hide` rule matches — so
-	// "all mutations except webhook delete" cannot be expressed in one rule set.
+	// Message → Send is the only mutation the node exposes.
 	{
 		displayName: 'Options',
 		name: 'requestOptions',
@@ -349,18 +231,9 @@ export const sentProperties: INodeProperties[] = [
 		default: {},
 		displayOptions: {
 			show: {
-				operation: ['create', 'rotateSecret', 'send', 'test', 'toggleStatus', 'update'],
+				operation: ['send'],
 			},
 		},
-		options: mutationOptions,
-	},
-	{
-		displayName: 'Options',
-		name: 'requestOptions',
-		type: 'collection',
-		placeholder: 'Add Option',
-		default: {},
-		displayOptions: { show: { resource: ['campaign'], operation: ['delete'] } },
 		options: mutationOptions,
 	},
 ];

@@ -33,9 +33,7 @@ See Sent's [authentication documentation](https://docs.sent.dm/reference/api/aut
 | --- | --- |
 | Account | Get authenticated account |
 | Message | Send, Get, Get Activities |
-| Contact | Get, Get Many |
-| Brand Campaign | Create, Delete, Get Many, Update |
-| Webhook | Create, Delete, Get, Get Many, Update, Toggle Status, Rotate Signing Secret, Test, Get Events, Get Event Types |
+| Contact | Get Contact, Get Contacts |
 | Number Lookup | Lookup |
 
 The endpoint-by-endpoint matrix is in [API coverage](https://github.com/sentdm/n8n-nodes-sent/blob/main/docs/verification/api-coverage.md).
@@ -53,15 +51,15 @@ The channel choices follow Sent's documented semantics:
 
 Sent currently documents no scheduling field in the v3 send-message request, so this package does not invent one.
 
-**Template Parameters**, **Campaign JSON**, and **Event Filters JSON** accept either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
+**Template Parameters** accepts either literal JSON text or an expression that resolves to an object, for example `={{ $json.variables }}`.
 
 ## Sandbox and idempotency
 
-Mutations share one **Options** collection carrying **Sandbox** and **Idempotency Key**. Sandbox is an operation-level option, not a credential toggle: it is implemented by sending `sandbox: true` in the request body. Sent documents sandbox and idempotency support for every mutation except webhook deletion, so `Webhook → Delete` shows no Options collection and sends neither field.
+**Message → Send** is the only operation that changes state, and it carries an **Options** collection with **Sandbox** and **Idempotency Key**. Sandbox is an operation-level option, not a credential toggle: it is implemented by sending `sandbox: true` in the request body.
 
 ## Pagination
 
-Sent's paginated list operations expose **Return All** and **Limit**. The shared paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard. The campaign list endpoint currently returns its complete documented collection without pagination parameters.
+**Contact → Get Many** exposes **Return All** and **Limit**. The paginator requests a constant page size of at most 100 items, preserves ordering, stops when `has_more` is false or data is empty, honors the requested limit, and has a 10,000-page safety guard.
 
 ## Sent Trigger
 
@@ -79,9 +77,7 @@ HMAC-SHA256(base64decode(secret after whsec_), webhookId + "." + timestamp + "."
 
 The expected header value is `v1,<base64 digest>`. Comparisons use Node.js `timingSafeEqual`; missing or malformed headers, modified bodies, and timestamps outside the ±300-second replay window receive HTTP 401 and start no execution. The trigger never emits the signing secret or the signature header in its output.
 
-That guarantee is about the trigger. The action node's `Webhook → Create`, `Webhook → Get Many`, and `Webhook → Rotate Signing Secret` operations return Sent's response as-is, which includes `signing_secret` — that is the point of those operations, but it does mean their output lands in execution data. Route them accordingly.
-
-**Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret, and rotate the secret with **Webhook → Rotate Signing Secret** if either is exposed. Verification fails closed: without a stored secret every delivery is rejected with 401.
+**Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret, and rotate it from the Sent console if either is exposed. Verification fails closed: without a stored secret every delivery is rejected with 401.
 
 Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and an idempotency key. The key is the resource ID plus its transition where the payload carries one, and otherwise a SHA-256 hash of the raw body; both are stable across Sent's redeliveries of the same event. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/09-durable-webhook-deduplication.json).
 
@@ -102,8 +98,8 @@ Importable JSON examples live in [`examples/workflows`](https://github.com/sentd
 - Sent's documented v3 send schema has no scheduling input.
 - Some complex campaign, profile, template, and webhook filter objects use validated advanced JSON fields to preserve the current documented schema without inventing UI fields.
 - Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
-- The node is scoped to messaging and delivery. Template authoring, User/seat administration and brand-profile onboarding are console tasks and are not exposed as actions, and neither are the Conversation endpoints or contact create/update/delete/message-summary. `Message → Send` still selects an existing template, and the searchable picker still lists them.
-- **Brand Campaign** operations still require a **Profile ID**, because Sent routes them under `/v3/profiles/{profileId}/campaigns`. Copy that ID from the Sent console; the node no longer lists profiles.
+- The action node is deliberately scoped to sending messages and reading their status. Template authoring, user and seat administration, brand-profile onboarding, brand campaigns, and webhook administration are all console tasks and are not exposed as actions. `Message → Send` still selects an existing template, and the searchable picker still lists them.
+- Webhook lifecycle is owned by **Sent Trigger**, which registers and removes its own webhook on activation and deactivation. There is no action-node equivalent, so a manual change cannot orphan an active trigger.
 
 ## Development and testing
 

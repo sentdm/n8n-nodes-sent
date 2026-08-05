@@ -50,7 +50,7 @@ describe('Sent.execute', () => {
 
 	it('normalizes a 204 into a deleted marker', async () => {
 		const { items } = await execute({
-			items: [{ resource: 'webhook', operation: 'delete', webhookId: 'w1' }],
+			items: [{ resource: 'message', operation: 'get', messageId: 'm1' }],
 			responses: [{ statusCode: 204, headers: {}, body: undefined }],
 		});
 
@@ -61,7 +61,7 @@ describe('Sent.execute', () => {
 		// `data: null` is the only path through unwrapEnvelope's non-object branch — a 204
 		// is normalized to `{deleted: true}`, which is an object and takes the other branch.
 		const { items } = await execute({
-			items: [{ resource: 'webhook', operation: 'rotateSecret', webhookId: 'w1' }],
+			items: [{ resource: 'account', operation: 'get' }],
 			responses: [ok({ success: true, data: null, meta: { request_id: 'r9' } })],
 		});
 
@@ -69,15 +69,6 @@ describe('Sent.execute', () => {
 		expect(items[0].json).not.toHaveProperty('meta');
 	});
 
-	it('unwraps a collection returned by a non-paginated list operation', async () => {
-		const { items } = await execute({
-			items: [{ resource: 'campaign', operation: 'getMany', profileId: 'p1' }],
-			responses: [ok({ success: true, data: { campaigns: [{ id: 'c1' }, { id: 'c2' }] } })],
-		});
-
-		expect(items.map((item) => item.json)).toEqual([{ id: 'c1' }, { id: 'c2' }]);
-		expect(items.every((item) => item.pairedItem)).toBe(true);
-	});
 
 	it('walks pages and truncates at the requested limit', async () => {
 		const { items, context } = await execute({

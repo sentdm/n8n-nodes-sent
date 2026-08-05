@@ -34,10 +34,6 @@ describe('Sent action parameter schema', () => {
 
 	it.each([
 		['message', 'send'],
-		['campaign', 'delete'],
-		['campaign', 'update'],
-		['campaign', 'create'],
-		['webhook', 'rotateSecret'],
 	])('displays the shared Options collection for %s.%s', (resource, operation) => {
 		const resolved = getNodeParameters(
 			sentProperties,
@@ -51,10 +47,16 @@ describe('Sent action parameter schema', () => {
 		expect(resolved?.requestOptions).toEqual({ sandbox: true });
 	});
 
-	it('hides the Options collection for Webhook Delete, which supports neither field', () => {
+	it.each([
+		['account', 'get'],
+		['contact', 'get'],
+		['contact', 'getMany'],
+		['message', 'get'],
+		['numberLookup', 'lookup'],
+	])('hides the Options collection for the read operation %s.%s', (resource, operation) => {
 		const resolved = getNodeParameters(
 			sentProperties,
-			{ resource: 'webhook', operation: 'delete', webhookId: 'wh-1' },
+			{ resource, operation },
 			true,
 			false,
 			{ typeVersion: 1 },
