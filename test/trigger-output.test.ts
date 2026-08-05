@@ -31,7 +31,13 @@ function delivery(event: Record<string, unknown>, overrides: DeliveryOverrides =
 		readRawBody: async () => rawBody,
 	};
 	const context = {
-		getNode: () => ({ name: 'Sent Trigger', type: 'test.sentTrigger', typeVersion: 1, position: [0, 0], parameters: {} }),
+		getNode: () => ({
+			name: 'Sent Trigger',
+			type: 'test.sentTrigger',
+			typeVersion: 1,
+			position: [0, 0],
+			parameters: {},
+		}),
 		getRequestObject: () => request,
 		getResponseObject: () => ({ writeHead, end }),
 		getWorkflowStaticData: () => ({
@@ -50,9 +56,39 @@ async function deliver(event: Record<string, unknown>, overrides: DeliveryOverri
 
 describe('Sent Trigger normalized output', () => {
 	it.each([
-		['message status', { field: 'message', event: 'message.delivered', timestamp: '2026-08-04T00:00:00Z', payload: { message_id: 'm1', message_status: 'DELIVERED' } }, 'delivered', 'm1:DELIVERED'],
-		['inbound message', { field: 'message', event: 'message.received', timestamp: '2026-08-04T00:00:00Z', payload: { message_id: 'm2', text: 'Synthetic inbound text' } }, 'received', 'm2:message.received'],
-		['template event', { field: 'templates', event: 'templates.approved', timestamp: '2026-08-04T00:00:00Z', payload: { template_id: 't1', status: 'APPROVED' } }, 'approved', 't1:APPROVED'],
+		[
+			'message status',
+			{
+				field: 'message',
+				event: 'message.delivered',
+				timestamp: '2026-08-04T00:00:00Z',
+				payload: { message_id: 'm1', message_status: 'DELIVERED' },
+			},
+			'delivered',
+			'm1:DELIVERED',
+		],
+		[
+			'inbound message',
+			{
+				field: 'message',
+				event: 'message.received',
+				timestamp: '2026-08-04T00:00:00Z',
+				payload: { message_id: 'm2', text: 'Synthetic inbound text' },
+			},
+			'received',
+			'm2:message.received',
+		],
+		[
+			'template event',
+			{
+				field: 'templates',
+				event: 'templates.approved',
+				timestamp: '2026-08-04T00:00:00Z',
+				payload: { template_id: 't1', status: 'APPROVED' },
+			},
+			'approved',
+			't1:APPROVED',
+		],
 	])('normalizes a verified %s event', async (_label, event, subtype, idempotencyKey) => {
 		const { result } = await deliver(event);
 		const json = result.workflowData?.[0]?.[0]?.json;
@@ -74,8 +110,18 @@ describe('Sent Trigger signature rejection', () => {
 	const event = { field: 'message', event: 'message.delivered', payload: { message_id: 'm1' } };
 
 	it.each([
-		['a tampered body', { rawBody: Buffer.from('{"field":"message","event":"message.delivered","payload":{"message_id":"forged"}}') }],
-		['a forged signature', { headers: { 'x-webhook-signature': 'v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' } }],
+		[
+			'a tampered body',
+			{
+				rawBody: Buffer.from(
+					'{"field":"message","event":"message.delivered","payload":{"message_id":"forged"}}',
+				),
+			},
+		],
+		[
+			'a forged signature',
+			{ headers: { 'x-webhook-signature': 'v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' } },
+		],
 		['a missing signature header', { headers: { 'x-webhook-signature': undefined } }],
 		['a mismatched webhook ID', { headers: { 'x-webhook-id': 'someone-elses-webhook' } }],
 		['a stale timestamp', { headers: { 'x-webhook-timestamp': '1000000000' } }],

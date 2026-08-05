@@ -31,16 +31,14 @@ export function computeSentSignature(
 	}
 	const key = Buffer.from(encodedKey, 'base64');
 	if (key.length === 0) throw new Error('Malformed webhook signing secret');
-	const signedContent = Buffer.concat([
-		Buffer.from(`${webhookId}.${timestamp}.`, 'utf8'),
-		rawBody,
-	]);
+	const signedContent = Buffer.concat([Buffer.from(`${webhookId}.${timestamp}.`, 'utf8'), rawBody]);
 	return `v1,${createHmac('sha256', key).update(signedContent).digest('base64')}`;
 }
 
 export function verifySentSignature(input: SignatureInput): SignatureResult {
 	const { webhookId, timestamp, signature, rawBody, secret } = input;
-	if (!webhookId || !timestamp || !signature) return { valid: false, reason: 'Missing signature header' };
+	if (!webhookId || !timestamp || !signature)
+		return { valid: false, reason: 'Missing signature header' };
 	if (!secret) return { valid: false, reason: 'Missing signing secret' };
 	if (!/^v1,[A-Za-z0-9+/]+={0,2}$/.test(signature)) {
 		return { valid: false, reason: 'Malformed signature' };

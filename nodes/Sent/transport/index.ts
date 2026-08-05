@@ -9,20 +9,11 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
-import type {
-	SentEnvelope,
-	SentHttpResponse,
-	SentListData,
-	SentRequestOptions,
-} from '../types';
+import type { SentEnvelope, SentHttpResponse, SentListData, SentRequestOptions } from '../types';
 
 export const SENT_API_BASE_URL = 'https://api.sent.dm';
 
-type SentFunctions =
-	| IExecuteFunctions
-	| IHookFunctions
-	| ILoadOptionsFunctions
-	| IWebhookFunctions;
+type SentFunctions = IExecuteFunctions | IHookFunctions | ILoadOptionsFunctions | IWebhookFunctions;
 
 function isObject(value: unknown): value is IDataObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);

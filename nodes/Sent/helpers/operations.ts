@@ -26,7 +26,11 @@ function jsonParameter(
 	itemIndex: number,
 	fieldName: string,
 ): IDataObject {
-	return parseJsonInput(context.getNodeParameter(name, itemIndex, ''), fieldName, context.getNode());
+	return parseJsonInput(
+		context.getNodeParameter(name, itemIndex, ''),
+		fieldName,
+		context.getNode(),
+	);
 }
 
 function baseRequest(
@@ -39,10 +43,7 @@ function baseRequest(
 	const options = requestOptions(context, itemIndex);
 	const sandbox = options.sandbox === true;
 	const idempotencyKey = String(options.idempotencyKey ?? '');
-	if (
-		idempotencyKey &&
-		(idempotencyKey.length > 255 || !/^[A-Za-z0-9_-]+$/.test(idempotencyKey))
-	) {
+	if (idempotencyKey && (idempotencyKey.length > 255 || !/^[A-Za-z0-9_-]+$/.test(idempotencyKey))) {
 		throw new NodeOperationError(
 			context.getNode(),
 			'Idempotency Key must be 1-255 letters, numbers, hyphens, or underscores',
@@ -97,10 +98,20 @@ export function buildOperation(
 
 	if (resource === 'message') {
 		if (operation === 'get') {
-			return baseRequest(context, itemIndex, 'GET', `/v3/messages/${identifier(context, itemIndex, 'messageId')}`);
+			return baseRequest(
+				context,
+				itemIndex,
+				'GET',
+				`/v3/messages/${identifier(context, itemIndex, 'messageId')}`,
+			);
 		}
 		if (operation === 'getActivities') {
-			return baseRequest(context, itemIndex, 'GET', `/v3/messages/${identifier(context, itemIndex, 'messageId')}/activities`);
+			return baseRequest(
+				context,
+				itemIndex,
+				'GET',
+				`/v3/messages/${identifier(context, itemIndex, 'messageId')}/activities`,
+			);
 		}
 		if (operation === 'send') {
 			const recipients = parameter(context, 'recipients', itemIndex)
@@ -108,10 +119,14 @@ export function buildOperation(
 				.map((value) => value.trim())
 				.filter(Boolean);
 			if (recipients.length === 0) {
-				throw new NodeOperationError(context.getNode(), 'At least one recipient is required', { itemIndex });
+				throw new NodeOperationError(context.getNode(), 'At least one recipient is required', {
+					itemIndex,
+				});
 			}
 			const messageType = parameter(context, 'messageType', itemIndex);
-			const selectedChannels = context.getNodeParameter('channels', itemIndex, ['sent']) as string[];
+			const selectedChannels = context.getNodeParameter('channels', itemIndex, [
+				'sent',
+			]) as string[];
 			const body: SentMessageRequest = {
 				to: recipients,
 				channel: selectedChannels.length > 0 ? selectedChannels : ['sent'],
@@ -136,7 +151,12 @@ export function buildOperation(
 				}
 				body.template = compactObject({
 					[locator.mode === 'name' ? 'name' : 'id']: template,
-					parameters: jsonParameter(context, 'templateParameters', itemIndex, 'Template Parameters'),
+					parameters: jsonParameter(
+						context,
+						'templateParameters',
+						itemIndex,
+						'Template Parameters',
+					),
 				});
 			}
 			return baseRequest(context, itemIndex, 'POST', '/v3/messages', body);
@@ -145,15 +165,30 @@ export function buildOperation(
 
 	if (resource === 'contact') {
 		// `getMany` renders no Contact ID field, so it must resolve before identifier().
-		if (operation === 'getMany') return { ...baseRequest(context, itemIndex, 'GET', '/v3/contacts'), query: filters(context, itemIndex), collectionKey: 'contacts', paginated: true };
+		if (operation === 'getMany')
+			return {
+				...baseRequest(context, itemIndex, 'GET', '/v3/contacts'),
+				query: filters(context, itemIndex),
+				collectionKey: 'contacts',
+				paginated: true,
+			};
 		const contactId = identifier(context, itemIndex, 'contactId');
-		if (operation === 'get') return baseRequest(context, itemIndex, 'GET', `/v3/contacts/${contactId}`);
+		if (operation === 'get')
+			return baseRequest(context, itemIndex, 'GET', `/v3/contacts/${contactId}`);
 	}
 
 	if (resource === 'numberLookup') {
-		return baseRequest(context, itemIndex, 'GET', `/v3/numbers/lookup/${identifier(context, itemIndex, 'phoneNumber')}`);
+		return baseRequest(
+			context,
+			itemIndex,
+			'GET',
+			`/v3/numbers/lookup/${identifier(context, itemIndex, 'phoneNumber')}`,
+		);
 	}
 
-	throw new NodeOperationError(context.getNode(), `Unsupported Sent operation: ${resource}.${operation}`, { itemIndex });
+	throw new NodeOperationError(
+		context.getNode(),
+		`Unsupported Sent operation: ${resource}.${operation}`,
+		{ itemIndex },
+	);
 }
-

@@ -18,8 +18,8 @@ export class Sent implements INodeType {
 		displayName: 'Sent',
 		name: 'sent',
 		icon: {
-		// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
-		// icon renders in, so the dark glyph belongs to the light theme and vice versa.
+			// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
+			// icon renders in, so the dark glyph belongs to the light theme and vice versa.
 			light: 'file:../../icons/sent-dark-icon.svg',
 			dark: 'file:../../icons/sent-light-icon.svg',
 		},
@@ -91,9 +91,7 @@ export class Sent implements INodeType {
 					records = unwrapEnvelope(await sentApiRequest.call(this, request));
 				}
 
-				returnData.push(
-					...records.map((json) => ({ json, pairedItem: { item: itemIndex } })),
-				);
+				returnData.push(...records.map((json) => ({ json, pairedItem: { item: itemIndex } })));
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({

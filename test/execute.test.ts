@@ -16,7 +16,13 @@ function executeContext(options: ExecuteOptions) {
 	}
 	return {
 		getInputData: () => options.items.map((_item, index) => ({ json: { index } })),
-		getNode: () => ({ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} }),
+		getNode: () => ({
+			name: 'Sent',
+			type: 'test.sent',
+			typeVersion: 1,
+			position: [0, 0],
+			parameters: {},
+		}),
 		getNodeParameter: (name: string, itemIndex: number, fallback?: unknown) =>
 			options.items[itemIndex]?.[name] ?? fallback,
 		continueOnFail: () => options.continueOnFail ?? false,
@@ -36,7 +42,9 @@ describe('Sent.execute', () => {
 	it('returns one paired item for a single-record operation', async () => {
 		const { branches, items } = await execute({
 			items: [{ resource: 'message', operation: 'get', messageId: 'm1' }],
-			responses: [ok({ success: true, data: { id: 'm1', status: 'DELIVERED' }, meta: { request_id: 'r1' } })],
+			responses: [
+				ok({ success: true, data: { id: 'm1', status: 'DELIVERED' }, meta: { request_id: 'r1' } }),
+			],
 		});
 
 		expect(branches).toHaveLength(1);
@@ -69,13 +77,18 @@ describe('Sent.execute', () => {
 		expect(items[0].json).not.toHaveProperty('meta');
 	});
 
-
 	it('walks pages and truncates at the requested limit', async () => {
 		const { items, context } = await execute({
 			items: [{ resource: 'contact', operation: 'getMany', returnAll: false, limit: 3 }],
 			responses: [
-				ok({ success: true, data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } } }),
-				ok({ success: true, data: { contacts: [{ id: '3' }, { id: '4' }], pagination: { has_more: true } } }),
+				ok({
+					success: true,
+					data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } },
+				}),
+				ok({
+					success: true,
+					data: { contacts: [{ id: '3' }, { id: '4' }], pagination: { has_more: true } },
+				}),
 			],
 		});
 
@@ -89,7 +102,10 @@ describe('Sent.execute', () => {
 				{ resource: 'message', operation: 'get', messageId: 'm1' },
 				{ resource: 'message', operation: 'get', messageId: 'm2' },
 			],
-			responses: [ok({ success: true, data: { id: 'm1' } }), ok({ success: true, data: { id: 'm2' } })],
+			responses: [
+				ok({ success: true, data: { id: 'm1' } }),
+				ok({ success: true, data: { id: 'm2' } }),
+			],
 		});
 
 		expect(items.map((item) => [item.json.id, item.pairedItem])).toEqual([
@@ -103,7 +119,11 @@ describe('Sent.execute', () => {
 			execute({
 				items: [{ resource: 'message', operation: 'get', messageId: 'm1' }],
 				responses: [
-					{ statusCode: 404, headers: {}, body: { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } } },
+					{
+						statusCode: 404,
+						headers: {},
+						body: { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
+					},
 				],
 			}),
 		).rejects.toThrow(/Message not found/);
@@ -117,7 +137,11 @@ describe('Sent.execute', () => {
 				{ resource: 'message', operation: 'get', messageId: 'm2' },
 			],
 			responses: [
-				{ statusCode: 404, headers: {}, body: { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } } },
+				{
+					statusCode: 404,
+					headers: {},
+					body: { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
+				},
 				ok({ success: true, data: { id: 'm2' } }),
 			],
 		});
@@ -141,9 +165,17 @@ describe('Sent.execute', () => {
 
 describe('Sent listSearch.getTemplates', () => {
 	function loadOptionsContext(body: unknown) {
-		const httpRequestWithAuthentication = vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body });
+		const httpRequestWithAuthentication = vi
+			.fn()
+			.mockResolvedValue({ statusCode: 200, headers: {}, body });
 		return {
-			getNode: () => ({ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} }),
+			getNode: () => ({
+				name: 'Sent',
+				type: 'test.sent',
+				typeVersion: 1,
+				position: [0, 0],
+				parameters: {},
+			}),
 			helpers: { httpRequestWithAuthentication },
 		};
 	}
@@ -177,7 +209,13 @@ describe('Sent listSearch.getTemplates', () => {
 	it('drops templates with no ID rather than offering an unselectable entry', async () => {
 		const context = loadOptionsContext({
 			success: true,
-			data: { templates: [{ id: 't1', name: 'Welcome' }, { name: 'Draft with no ID' }, { id: '', name: 'Empty' }] },
+			data: {
+				templates: [
+					{ id: 't1', name: 'Welcome' },
+					{ name: 'Draft with no ID' },
+					{ id: '', name: 'Empty' },
+				],
+			},
 		});
 
 		await expect(search(context)).resolves.toEqual({

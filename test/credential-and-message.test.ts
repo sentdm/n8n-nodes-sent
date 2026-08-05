@@ -5,8 +5,15 @@ import { buildOperation } from '../nodes/Sent/helpers/operations';
 
 function executeContext(parameters: Record<string, unknown>) {
 	return {
-		getNode: () => ({ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} }),
-		getNodeParameter: (name: string, _index: number, fallback?: unknown) => parameters[name] ?? fallback,
+		getNode: () => ({
+			name: 'Sent',
+			type: 'test.sent',
+			typeVersion: 1,
+			position: [0, 0],
+			parameters: {},
+		}),
+		getNodeParameter: (name: string, _index: number, fallback?: unknown) =>
+			parameters[name] ?? fallback,
 	};
 }
 
@@ -111,8 +118,6 @@ describe('Send Message request construction', () => {
 			text: 'Hello',
 			requestOptions: { idempotencyKey: 'spaces are not allowed' },
 		});
-		expect(() => buildOperation(context as never, 0, 'message', 'send')).toThrow(
-			/Idempotency Key/,
-		);
+		expect(() => buildOperation(context as never, 0, 'message', 'send')).toThrow(/Idempotency Key/);
 	});
 });

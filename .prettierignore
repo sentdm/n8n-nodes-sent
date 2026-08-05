@@ -1,0 +1,7 @@
+dist
+node_modules
+package-lock.json
+
+# `n8n-node lint` byte-compares this file against its own bundled template and aborts
+# with "Strict mode violation" if it differs. Never let a formatter touch it.
+eslint.config.mjs

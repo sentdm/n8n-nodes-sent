@@ -32,8 +32,10 @@ const fallbackMessageSubtypes = [
 ];
 
 function isNotFound(error: unknown): boolean {
-	return String((error as { httpCode?: string }).httpCode ?? '').includes('404') ||
-		(error instanceof Error && error.message.includes('404'));
+	return (
+		String((error as { httpCode?: string }).httpCode ?? '').includes('404') ||
+		(error instanceof Error && error.message.includes('404'))
+	);
 }
 
 function staticData(context: IHookFunctions | IWebhookFunctions): SentTriggerStaticData {
@@ -45,8 +47,8 @@ export class SentTrigger implements INodeType {
 		displayName: 'Sent Trigger',
 		name: 'sentTrigger',
 		icon: {
-		// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
-		// icon renders in, so the dark glyph belongs to the light theme and vice versa.
+			// Named by glyph colour, not by theme: n8n's `light`/`dark` keys are the theme the
+			// icon renders in, so the dark glyph belongs to the light theme and vice versa.
 			light: 'file:../../icons/sent-dark-icon.svg',
 			dark: 'file:../../icons/sent-light-icon.svg',
 		},
@@ -125,7 +127,9 @@ export class SentTrigger implements INodeType {
 						method: 'GET',
 						path: '/v3/webhooks/event-types',
 					});
-					const data = envelope.data as { event_types?: Array<{ name?: string; display_name?: string; is_active?: boolean }> } | undefined;
+					const data = envelope.data as
+						| { event_types?: Array<{ name?: string; display_name?: string; is_active?: boolean }> }
+						| undefined;
 					const eventTypes = data?.event_types ?? [];
 					const activeMessageTypes = eventTypes.filter(
 						(item) => item.is_active !== false && item.name?.startsWith('message.'),

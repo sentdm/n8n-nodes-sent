@@ -16,7 +16,10 @@ const sourceByFile: Record<string, string> = {
 };
 
 function readIcon(reference: string): string {
-	const file = reference.replace(/^file:/, '').split('/').pop() as string;
+	const file = reference
+		.replace(/^file:/, '')
+		.split('/')
+		.pop() as string;
 	const svg = sourceByFile[file];
 	expect(svg, `icon reference points at a file that does not exist: ${file}`).toBeDefined();
 	return svg;

@@ -31,7 +31,13 @@ function contextWithResponses(...responses: unknown[]) {
 	const httpRequestWithAuthentication = vi.fn();
 	for (const response of responses) httpRequestWithAuthentication.mockResolvedValueOnce(response);
 	return {
-		getNode: () => ({ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} }),
+		getNode: () => ({
+			name: 'Sent',
+			type: 'test.sent',
+			typeVersion: 1,
+			position: [0, 0],
+			parameters: {},
+		}),
 		helpers: { httpRequestWithAuthentication },
 	};
 }
@@ -82,7 +88,11 @@ describe('Sent transport', () => {
 		await sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' });
 		const options = context.helpers.httpRequestWithAuthentication.mock.calls[0][1];
 		expect(options.headers).toEqual({ Accept: 'application/json' });
-		expect(options).toMatchObject({ returnFullResponse: true, ignoreHttpStatusErrors: true, json: true });
+		expect(options).toMatchObject({
+			returnFullResponse: true,
+			ignoreHttpStatusErrors: true,
+			json: true,
+		});
 	});
 
 	it('preserves safe Sent error context and request ID', async () => {
@@ -91,7 +101,11 @@ describe('Sent transport', () => {
 			headers: { 'x-request-id': 'req-422' },
 			body: {
 				success: false,
-				error: { code: 'VALIDATION_001', message: 'Invalid phone number', details: { to: ['invalid'] } },
+				error: {
+					code: 'VALIDATION_001',
+					message: 'Invalid phone number',
+					details: { to: ['invalid'] },
+				},
 				meta: { request_id: 'req-422' },
 			},
 		});
@@ -117,7 +131,11 @@ describe('Sent transport', () => {
 	});
 
 	it.each([
-		['network failure', new Error('socket closed with api-key=real-looking-secret'), /Sent API request failed/],
+		[
+			'network failure',
+			new Error('socket closed with api-key=real-looking-secret'),
+			/Sent API request failed/,
+		],
 		['timeout', new Error('ETIMEDOUT after 30000ms'), /timed out/],
 	])('normalizes %s without leaking low-level sensitive text', async (_name, failure, message) => {
 		const context = contextWithResponses();
@@ -134,7 +152,13 @@ describe('Sent transport', () => {
 	it('rethrows an n8n error instead of relabelling it a network failure', async () => {
 		const context = contextWithResponses();
 		const credentialError = new NodeOperationError(
-			{ name: 'Sent', type: 'test.sent', typeVersion: 1, position: [0, 0], parameters: {} } as never,
+			{
+				name: 'Sent',
+				type: 'test.sent',
+				typeVersion: 1,
+				position: [0, 0],
+				parameters: {},
+			} as never,
 			"Credentials for 'sentApi' could not be found",
 		);
 		context.helpers.httpRequestWithAuthentication.mockRejectedValueOnce(credentialError);
@@ -176,8 +200,16 @@ describe('Sent transport', () => {
 
 	it('paginates until has_more is false', async () => {
 		const context = contextWithResponses(
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: [{ id: '1' }], pagination: { has_more: true } } } },
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: [{ id: '2' }], pagination: { has_more: false } } } },
+			{
+				statusCode: 200,
+				headers: {},
+				body: { success: true, data: { contacts: [{ id: '1' }], pagination: { has_more: true } } },
+			},
+			{
+				statusCode: 200,
+				headers: {},
+				body: { success: true, data: { contacts: [{ id: '2' }], pagination: { has_more: false } } },
+			},
 		);
 		await expect(
 			sentApiRequestAllItems.call(
@@ -194,8 +226,16 @@ describe('Sent transport', () => {
 		const page = (start: number) =>
 			Array.from({ length: 100 }, (_, offset) => ({ id: String(start + offset) }));
 		const context = contextWithResponses(
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: page(1), pagination: { has_more: true } } } },
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: page(101), pagination: { has_more: true } } } },
+			{
+				statusCode: 200,
+				headers: {},
+				body: { success: true, data: { contacts: page(1), pagination: { has_more: true } } },
+			},
+			{
+				statusCode: 200,
+				headers: {},
+				body: { success: true, data: { contacts: page(101), pagination: { has_more: true } } },
+			},
 		);
 
 		const records = await sentApiRequestAllItems.call(
@@ -223,7 +263,10 @@ describe('Sent transport', () => {
 		const context = contextWithResponses({
 			statusCode: 200,
 			headers: {},
-			body: { success: true, data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } } },
+			body: {
+				success: true,
+				data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } },
+			},
 		});
 		await expect(
 			sentApiRequestAllItems.call(
@@ -238,8 +281,19 @@ describe('Sent transport', () => {
 
 	it('returns a final partial page and stops', async () => {
 		const context = contextWithResponses(
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } } } },
-			{ statusCode: 200, headers: {}, body: { success: true, data: { contacts: [{ id: '3' }], pagination: { has_more: false } } } },
+			{
+				statusCode: 200,
+				headers: {},
+				body: {
+					success: true,
+					data: { contacts: [{ id: '1' }, { id: '2' }], pagination: { has_more: true } },
+				},
+			},
+			{
+				statusCode: 200,
+				headers: {},
+				body: { success: true, data: { contacts: [{ id: '3' }], pagination: { has_more: false } } },
+			},
 		);
 		await expect(
 			sentApiRequestAllItems.call(

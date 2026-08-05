@@ -13,12 +13,14 @@ const operations: Record<
 	string,
 	Array<{ name: string; value: string; action: string; description: string }>
 > = {
-	account: [{
+	account: [
+		{
 			name: 'Get',
 			value: 'get',
 			action: 'Get authenticated account',
 			description: 'Retrieve the account the API key belongs to',
-		}],
+		},
+	],
 	contact: [
 		// `name` shows under the Resource selector, so it must not repeat the resource
 		// (ux-guidelines "Don't repeat the resource"). `action` shows in the node picker

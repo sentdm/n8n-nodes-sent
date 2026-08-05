@@ -32,20 +32,21 @@ describe('Sent action parameter schema', () => {
 		).not.toThrow();
 	});
 
-	it.each([
-		['message', 'send'],
-	])('displays the shared Options collection for %s.%s', (resource, operation) => {
-		const resolved = getNodeParameters(
-			sentProperties,
-			{ resource, operation, requestOptions: { sandbox: true } },
-			true,
-			false,
-			{ typeVersion: 1 },
-			null,
-		);
+	it.each([['message', 'send']])(
+		'displays the shared Options collection for %s.%s',
+		(resource, operation) => {
+			const resolved = getNodeParameters(
+				sentProperties,
+				{ resource, operation, requestOptions: { sandbox: true } },
+				true,
+				false,
+				{ typeVersion: 1 },
+				null,
+			);
 
-		expect(resolved?.requestOptions).toEqual({ sandbox: true });
-	});
+			expect(resolved?.requestOptions).toEqual({ sandbox: true });
+		},
+	);
 
 	it.each([
 		['account', 'get'],

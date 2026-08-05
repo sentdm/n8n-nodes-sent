@@ -110,7 +110,13 @@ describe('Sent webhook signature verification', () => {
 		const deliverAt = async (seconds: string) => {
 			const signature = computeSentSignature(webhookId, seconds, body, secretForRun);
 			const context = {
-				getNode: () => ({ name: 'Sent Trigger', type: 't', typeVersion: 1, position: [0, 0], parameters: {} }),
+				getNode: () => ({
+					name: 'Sent Trigger',
+					type: 't',
+					typeVersion: 1,
+					position: [0, 0],
+					parameters: {},
+				}),
 				getRequestObject: () => ({
 					rawBody: body,
 					headers: {

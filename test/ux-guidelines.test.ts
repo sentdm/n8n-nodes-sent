@@ -55,7 +55,10 @@ describe('operation naming conforms to the n8n UX guidelines', () => {
 	// often displayed above the operation, so it's not necessary to repeat it."
 	it.each(cases)('%s name does not repeat the resource', (_label, operation) => {
 		const resourceWords = operation.resourceLabel.toLowerCase().split(/\s+/);
-		const nameWords = operation.name.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+		const nameWords = operation.name
+			.toLowerCase()
+			.replace(/[^a-z\s]/g, '')
+			.split(/\s+/);
 		for (const word of nameWords) {
 			const singular = word.replace(/s$/, '');
 			expect(
@@ -68,10 +71,9 @@ describe('operation naming conforms to the n8n UX guidelines', () => {
 	// "Omit articles: To keep the text shorter, get rid of articles (a, an, the...)."
 	it.each(cases)('%s action omits articles', (_label, operation) => {
 		expect(operation.action, 'every operation needs an action').toBeTruthy();
-		expect(
-			operation.action,
-			`action "${operation.action}" contains an article`,
-		).not.toMatch(/\b(a|an|the)\b/i);
+		expect(operation.action, `action "${operation.action}" contains an article`).not.toMatch(
+			/\b(a|an|the)\b/i,
+		);
 	});
 
 	// "Case: Title Case" for `name`.

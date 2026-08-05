@@ -15,7 +15,13 @@ function hookContext(
 	const httpRequestWithAuthentication = vi.fn();
 	for (const response of responses) httpRequestWithAuthentication.mockResolvedValueOnce(response);
 	return {
-		getNode: () => ({ name: 'Sent Trigger', type: 'test.sentTrigger', typeVersion: 1, position: [0, 0], parameters: {} }),
+		getNode: () => ({
+			name: 'Sent Trigger',
+			type: 'test.sentTrigger',
+			typeVersion: 1,
+			position: [0, 0],
+			parameters: {},
+		}),
 		getNodeParameter: (name: string, fallback?: unknown) => parameters[name] ?? fallback,
 		getNodeWebhookUrl: () => 'https://n8n.example.com/webhook/sent',
 		getWorkflowStaticData: () => data,
@@ -67,7 +73,11 @@ describe('Sent Trigger lifecycle', () => {
 	it('clears stale static data when Sent returns 404', async () => {
 		const data = { webhookId: 'wh-missing', signingSecret: 'whsec_dGVzdA==' };
 		const context = hookContext(data, [
-			{ statusCode: 404, headers: {}, body: { success: false, error: { code: 'NOT_FOUND', message: 'Webhook not found' } } },
+			{
+				statusCode: 404,
+				headers: {},
+				body: { success: false, error: { code: 'NOT_FOUND', message: 'Webhook not found' } },
+			},
 		]);
 		await expect(methods.checkExists.call(context as never)).resolves.toBe(false);
 		expect(data).toEqual({});

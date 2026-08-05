@@ -13,7 +13,8 @@ export interface SentError extends IDataObject {
 	doc_url?: string;
 }
 
-export interface SentEnvelope<T extends IDataObject | IDataObject[] = IDataObject> extends IDataObject {
+export interface SentEnvelope<T extends IDataObject | IDataObject[] = IDataObject>
+	extends IDataObject {
 	success?: boolean;
 	data?: T | null;
 	error?: SentError | null;
@@ -70,4 +71,3 @@ export interface SentWebhook extends IDataObject {
 	is_active?: boolean;
 	event_types?: string[];
 }
-
