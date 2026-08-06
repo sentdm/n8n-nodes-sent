@@ -21,28 +21,29 @@ Do these steps in order. They require account ownership and authorization, and c
 - [ ] Enable GitHub Actions and required branch protections.
 - [ ] Confirm `repository`, `homepage`, `bugs`, and `author` in `package.json` point to that exact repository and identity.
 
-## 3. Bootstrap npm, then hand publishing to OIDC
+## 3. Prepare a provenance-compliant first release
 
-`.github/workflows/publish.yml` is OIDC-only and has no `NPM_TOKEN`. npm can attach a Trusted Publisher **only to a package that already exists** ([npm/cli#8544](https://github.com/npm/cli/issues/8544)), so the first publish cannot come from the workflow. Do these four in order.
-
-- [ ] **Publish a `0.0.0` placeholder from an authorized maintainer machine** so the package name exists. `publish.yml` gates on the tag matching `package.json`'s version, not on the package being new, so this placeholder does not block the real release.
-- [ ] In npm package settings, set access to **public**.
-- [ ] Add a Trusted Publisher: provider **GitHub Actions**, owner **sentdm**, repository **n8n-nodes-sent**, workflow **publish.yml**, environment blank unless the workflow is updated to use one.
-- [ ] Confirm no long-lived `NPM_TOKEN` secret exists on the repository.
-
-## 4. Release through GitHub Actions
+[npm can attach a Trusted Publisher only after the package exists](https://docs.npmjs.com/cli/v11/commands/npm-trust/). Do not solve that bootstrap constraint with a local or placeholder publish: [n8n requires every community-node publish from 1 May 2026 onward to come from GitHub Actions with npm provenance](https://docs.n8n.io/connect/create-nodes/build-your-node/reference/verification-guidelines/). The repository's `publish.yml` follows the official n8n starter's optional token fallback so the first real version can still meet that requirement.
 
 - [ ] Run every command in `docs/verification/verification-readiness.md` on a clean checkout and confirm the recorded results still hold.
 - [ ] Ensure `git status --short` is empty.
 - [ ] Confirm `CHANGELOG.md` describes the version being released.
-- [ ] Run `npm run release` as an authorized maintainer to create the version commit and tag, using the documented non-`v` tag format (for example `0.1.0`).
-- [ ] Push the release commit and tag.
-- [ ] Confirm the **Publish** workflow run succeeded; do not publish from a pull request or a local uncommitted tree.
+- [ ] Complete the live Sent and n8n checks still marked pending in `verification-readiness.md`; mocked tests are not a substitute for these checks.
+- [ ] Create a short-lived npm **Granular Access Token** with read/write permission, bypass 2FA enabled, and access limited as narrowly as npm permits to the `@sentdm` scope. Use the shortest practical expiry because the individual package does not exist yet.
+- [ ] Store it temporarily as the GitHub Actions repository secret `NPM_TOKEN`. Do not place it in a local `.npmrc`, source file, release artifact, or log.
+
+## 4. Publish through GitHub Actions, then hand publishing to OIDC
+
+- [ ] Push the reviewed release commit to `main`, then create and push the exact non-`v` tag that matches `package.json`. This repository already has version/changelog metadata prepared for `0.1.0`, so an authorized maintainer should tag that release commit directly (`git tag -a 0.1.0 -m 'Release 0.1.0'`, then `git push origin 0.1.0`). For later version bumps, `npm run release` creates and pushes the release metadata. In both cases, the tag-triggered GitHub workflow performs the actual npm publish.
+- [ ] Confirm the **Publish** workflow ran from the public `sentdm/n8n-nodes-sent` repository and succeeded. It must publish the scoped package with public access and provenance; never run `npm publish` locally.
 - [ ] Confirm the npm version exactly matches `package.json` and the Git tag.
 - [ ] Confirm npm shows provenance linking to the exact public workflow, repository, commit, and tag: `npm view @sentdm/n8n-nodes-sent dist.attestations`.
 - [ ] Confirm `npm view @sentdm/n8n-nodes-sent repository version --json` returns the exact metadata.
-- [ ] Run the scanner against the published version and save the passing output. Run **both** `npx --yes @n8n/scan-community-package@0.31.0 @sentdm/n8n-nodes-sent@<version>` and the same command with `@beta`; the Portal has been observed running a build ahead of `latest`.
-- [ ] Re-check the scanner's current version and behavior immediately before running it. The 0.31.0 CLI has no functional `--help` and treats its positional argument as an npm package name, so a typo returns an npm 404 rather than a usage error.
+- [ ] In npm package settings, add a Trusted Publisher: provider **GitHub Actions**, owner **sentdm**, repository **n8n-nodes-sent**, workflow **publish.yml**, environment blank, allowed action **npm publish**.
+- [ ] Delete the GitHub `NPM_TOKEN` secret, revoke the Granular Access Token on npm, and confirm neither remains usable. Future releases must take the workflow's OIDC path.
+- [ ] After OIDC is configured, set npm publishing access to disallow traditional tokens if the package settings offer that control; Trusted Publishing continues to work.
+- [ ] Re-check scanner dist-tags immediately before submission with `npm view @n8n/scan-community-package dist-tags --json`. On 2026-08-06, `latest` and `beta` both resolved to 0.31.0 while `stable` resolved to 0.29.1; do not assume those tags remain unchanged.
+- [ ] Run the scanner against the exact published version and save the passing output. Run the workflow-pinned command `npx --yes @n8n/scan-community-package@0.31.0 '@sentdm/n8n-nodes-sent@<version>'`, then repeat with the current `@latest` and `@beta` when either resolves to a different build. The workflow must keep a deterministic pin rather than attempting to work around unpublished-package or scanner behavior.
 
 ## 5. Verify public evidence
 
