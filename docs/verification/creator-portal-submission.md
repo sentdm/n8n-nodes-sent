@@ -24,10 +24,11 @@ The `Sent` action node exposes 7 operations across Account, Message, Contact, an
 
 - Package/repository publication, tag creation, GitHub Actions execution, provenance, public metadata, scanner pass, and Creator Portal submission are external actions still pending.
 - Exact public checks currently fail: npm returns E404 and GitHub is not anonymously readable.
-- The clean post-remediation command gate and live Sent/n8n integration checks must be recorded before publication.
+- The remediation suite passes, but the exact clean-install command gate with the pinned CLI and the live Sent/n8n integration checks must be recorded before publication.
 - Live Sent credential and webhook tests require a user-authorized API key and a public HTTPS endpoint.
 - Sent's current message request schema does not document scheduling.
 - Public HTTPS is required for trigger activation.
+- A signing secret rotated directly in Sent is not returned by the webhook read endpoint; deactivate and reactivate the workflow to register and store a new secret.
 - **Template Parameters** is a JSON field, because template variables are defined by the template rather than by a fixed schema. It accepts literal JSON or an expression that resolves to an object.
 
 ## Public Creator Portal inspection

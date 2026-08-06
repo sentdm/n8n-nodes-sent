@@ -4,9 +4,9 @@ Baseline assessment date: 2026-08-05. The command log below records the pre-reme
 
 ## Current release decision
 
-**Not ready to publish.** Before treating any baseline "Pass" below as current evidence, rerun the complete command gate on a clean checkout and replace the recorded environment/results. Live valid/invalid credentials, sandbox sending, pagination, disabled-webhook recovery, signed and forged deliveries, deactivation, and n8n AI Tools UI/output behavior also remain required. Public repository/package state, provenance, the published-package scanner, and Creator Portal review remain external gates.
+**Not ready to publish.** The remediation suite passed locally, but the exact clean-install gate with the newly pinned CLI has not completed. Live valid/invalid credentials, organization/profile routing, sandbox sending, pagination, disabled-webhook recovery, signed and forged deliveries, deactivation, and n8n AI Tools UI/output behavior also remain required. Public repository/package state, provenance, the published-package scanner, and Creator Portal review remain external gates.
 
-Partial post-remediation checks recorded on 2026-08-06: the lockfile accepts `npm ci --dry-run`; the codex-category and publication-workflow guards pass and were each proven to fail against a noncompliant value; `publish.yml` parses as YAML; `npm audit --omit=dev --package-lock-only` reports zero vulnerabilities; and the full lockfile audit still reports six moderate and two high development-tooling advisories. These partial checks do not replace the clean full gate.
+Post-remediation checks recorded on 2026-08-06: lint, strict TypeScript, build, and all 13 test files / **282 tests** passed with the previously installed `@n8n/node-cli` 0.42.0. The codex-category and publication-workflow guards pass and were each proven to fail against a noncompliant value; `publish.yml` parses as YAML; `npm audit --omit=dev --package-lock-only` reports zero vulnerabilities; and the full lockfile audit still reports six moderate and two high development-tooling advisories. `@n8n/node-cli` 0.42.1 is pinned in `package.json` and `package-lock.json`, but a clean `npm ci` could not finish in the restricted review environment because a required registry tarball was not cached. These results therefore do not replace the clean 0.42.1 install and full gate required before release.
 
 ## Command log
 
@@ -45,7 +45,7 @@ No tests, examples, docs, plans, CI workflows, or source `.ts` files are include
 
 | Requirement | Evidence | Result | Remaining human action |
 | --- | --- | --- | --- |
-| Official scaffold and CLI | `@n8n/node-cli` 0.42.1 pinned in `devDependencies`; `eslint.config.mjs` is the unmodified default re-export that strict mode requires | Updated after baseline | Rerun clean install and the full gate with 0.42.1 |
+| Official scaffold and CLI | `@n8n/node-cli` 0.42.1 pinned in `devDependencies` and `package-lock.json`; `eslint.config.mjs` is the unmodified default re-export that strict mode requires | Pin updated; exact clean gate pending | Run `npm ci` and the full gate with 0.42.1 on a network-enabled clean checkout |
 | Node.js 22+ | `engines.node: ">=22"`; both workflows use Node 22 | Pass | None |
 | Clean install | `package-lock.json` committed; both workflows use `npm ci` | Pass | None |
 | English UI and documentation | `n8n-node lint` plus editorial review | Pass | None |
@@ -68,7 +68,7 @@ No tests, examples, docs, plans, CI workflows, or source `.ts` files are include
 
 ## What still needs external state
 
-The clean post-remediation gate and live Sent/n8n checks have not yet been recorded. The public GitHub repository, npm package, Git tag, Actions publish run, npm provenance, scanner pass, and Creator Portal submission also do not exist yet. Local implementation cannot substitute for them; `submission-checklist.md` has the required ordering.
+The exact clean `npm ci` gate with `@n8n/node-cli` 0.42.1 and the live Sent/n8n checks have not yet been recorded. The public GitHub repository, npm package, Git tag, Actions publish run, npm provenance, scanner pass, and Creator Portal submission also do not exist yet. Local implementation cannot substitute for them; `submission-checklist.md` has the required ordering.
 
 ## Security audit interpretation
 

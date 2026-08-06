@@ -68,7 +68,7 @@ Read operations whose Sent response contains more than ten fields expose **Outpu
 
 The trigger registers the n8n production webhook URL when a workflow activates and stores the returned webhook ID and signing secret in node workflow static data. Activation validates the remote URL, event filters, retry/timeout settings, active state, and local signing secret; it updates or reactivates a stale registration and safely recreates one whose secret is unavailable. A persisted request key makes a retried create idempotent. Deactivation deletes only the stored webhook. Sent must be able to reach a public HTTPS URL; non-HTTPS URLs, `localhost`, `.local` names, IPv4 loopback/private ranges, `0.0.0.0`, and IPv6 loopback are rejected.
 
-The trigger subscribes to the `message` event category. It dynamically loads active `message.*` subtypes from `GET /v3/webhooks/event-types` and falls back to the documented static subtype list whenever that call fails or returns no active `message.*` type, so the subtype picker is never empty.
+The trigger subscribes to the `message` event category. It dynamically loads active `message.*` subtypes from `GET /v3/webhooks/event-types`. It falls back to the documented static subtype list when Sent is temporarily unavailable, rate-limited, or returns no active `message.*` type. Authentication and other non-transient client errors are surfaced instead of being hidden by the fallback.
 
 ### Webhook security
 
@@ -80,7 +80,7 @@ HMAC-SHA256(base64decode(secret after whsec_), webhookId + "." + timestamp + "."
 
 The expected header value is `v1,<base64 digest>`. Comparisons use Node.js `timingSafeEqual`; missing or malformed headers, modified bodies, and timestamps outside the ±300-second replay window receive HTTP 401 and start no execution. The trigger never emits the signing secret or the signature header in its output.
 
-**Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret, and rotate it from the Sent console if either is exposed. Verification fails closed: without a stored secret every delivery is rejected with 401.
+**Where the signing secret is stored.** Sent returns a webhook's signing secret only from `POST /v3/webhooks`, so it cannot be supplied as a credential field without giving up automatic registration. Like n8n's built-in Stripe and GitHub triggers, this node keeps the secret in workflow static data. n8n persists static data in the `workflow_entity.staticData` column, which is **not** covered by `N8N_ENCRYPTION_KEY`, and copies it into saved execution records. Treat database and execution-log access as equivalent to access to the signing secret. If the secret is exposed, rotate it in Sent, then deactivate and reactivate the n8n workflow so the trigger registers a new webhook and stores its new secret. Sent's webhook read response does not reveal a rotated secret, so an out-of-band rotation cannot be repaired automatically. Verification fails closed: without a matching stored secret every delivery is rejected with 401.
 
 Valid output includes the event category/type, payload, webhook ID/timestamp, safe relevant headers, parsed raw event, and an idempotency key. Where possible, the key combines the resource ID, transition, and event occurrence timestamp; otherwise it uses a SHA-256 hash of the raw body. Exact redeliveries retain the same key while later occurrences of a repeated status remain distinct. Durable deduplication must be implemented in the workflow; see [the Postgres deduplication example](https://github.com/sentdm/n8n-nodes-sent/blob/main/examples/workflows/07-durable-webhook-deduplication.json).
 
@@ -90,7 +90,7 @@ Run `npm run dev`. Use a secure public HTTPS tunnel or an n8n instance with a pu
 
 ## Errors, rate limits, and retries
 
-Sent errors are surfaced with the HTTP status, safe Sent code/message, request ID, validation details, documentation URL, and `Retry-After` when present. Secret, token, phone, recipient, and body fields are redacted from validation details. The node handles 204 responses and n8n **Continue On Fail** item behavior. Mutations are never retried automatically because replaying them without an intentional idempotency key can duplicate side effects. Build rate-limit handling in the workflow using `Retry-After` and an explicit policy.
+Sent errors are surfaced with the HTTP status, safe Sent code/message, request ID, validation details, documentation URL, and `Retry-After` when present. Secret, token, phone, recipient, and body fields are redacted from validation details. The node handles 204 responses and n8n **Continue On Fail** item behavior; failed items retain structured `errorCode`, `httpCode`, `requestId`, `retryAfter`, and `documentationUrl` fields when Sent provides them. Mutations are never retried automatically because replaying them without an intentional idempotency key can duplicate side effects. Build rate-limit handling in the workflow using `Retry-After` and an explicit policy.
 
 ## Example workflows
 
@@ -113,7 +113,7 @@ They contain placeholders only — no credential IDs, no secrets, and phone numb
 - Sent's documented v3 send schema has no scheduling input.
 - Webhook registration requires a public HTTPS URL and real Sent credentials; it cannot be exercised against `localhost`.
 - The action node is deliberately scoped to sending messages and reading their status. Template authoring, user and seat administration, brand-profile onboarding, brand campaigns, and webhook administration are all console tasks and are not exposed as actions. `Message → Send` still selects an existing template, and the searchable picker still lists them.
-- Webhook lifecycle is owned by **Sent Trigger**, which registers and removes its own webhook on activation and deactivation. There is no action-node equivalent, so a manual change cannot orphan an active trigger.
+- Webhook lifecycle is owned by **Sent Trigger**, which registers, repairs, reactivates, and removes its own webhook. There is no action-node equivalent. If a webhook signing secret is rotated directly in Sent, deactivate and reactivate the workflow because Sent does not return the replacement secret from its webhook read endpoint.
 
 ## Development and testing
 
