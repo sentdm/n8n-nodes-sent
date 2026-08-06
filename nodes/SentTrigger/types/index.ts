@@ -3,6 +3,8 @@ import type { IDataObject } from 'n8n-workflow';
 export interface SentTriggerStaticData extends IDataObject {
 	webhookId?: string;
 	signingSecret?: string;
+	webhookCreationGeneration?: string;
+	/** Legacy fields cleared during lifecycle handling; deterministic creation no longer relies on them. */
 	webhookCreationIdempotencyKey?: string;
 	webhookCreationFingerprint?: string;
 }

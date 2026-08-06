@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import type {
 	IHookFunctions,
@@ -73,12 +73,7 @@ function isAuthorizationError(error: unknown): boolean {
 
 function isTransientError(error: unknown): boolean {
 	const statusCode = statusCodeFromError(error);
-	return (
-		statusCode === undefined ||
-		statusCode === 408 ||
-		statusCode === 429 ||
-		statusCode >= 500
-	);
+	return statusCode === undefined || statusCode === 408 || statusCode === 429 || statusCode >= 500;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -117,7 +112,10 @@ function stringList(
 	}
 	const normalized = [...new Set(value.map((entry) => String(entry).trim()))].sort();
 	if (required && normalized.length === 0) {
-		throw new NodeOperationError(context.getNode(), `'${displayName}' must contain at least one value`);
+		throw new NodeOperationError(
+			context.getNode(),
+			`'${displayName}' must contain at least one value`,
+		);
 	}
 	return normalized;
 }
@@ -156,14 +154,7 @@ function desiredWebhookConfiguration(context: IHookFunctions): WebhookConfigurat
 		endpoint_url: webhookUrl,
 		event_types: eventTypes,
 		event_filters: eventFilters,
-		retry_count: boundedInteger(
-			context,
-			rawOptions.retryCount,
-			'Retry Count',
-			3,
-			1,
-			5,
-		),
+		retry_count: boundedInteger(context, rawOptions.retryCount, 'Retry Count', 3, 1, 5),
 		timeout_seconds: boundedInteger(
 			context,
 			rawOptions.timeoutSeconds,
@@ -189,7 +180,9 @@ function normalizedFilters(value: unknown): Record<string, string[]> | undefined
 		if (!normalized) return undefined;
 		if (normalized.length > 0) result[key] = normalized;
 	}
-	return Object.fromEntries(Object.entries(result).sort(([left], [right]) => left.localeCompare(right)));
+	return Object.fromEntries(
+		Object.entries(result).sort(([left], [right]) => left.localeCompare(right)),
+	);
 }
 
 function webhookConfigurationMatches(
@@ -208,22 +201,41 @@ function webhookConfigurationMatches(
 	);
 }
 
-function configurationFingerprint(configuration: WebhookConfiguration): string {
-	return createHash('sha256').update(JSON.stringify(configuration)).digest('hex');
-}
-
 function mutationIdempotencyKey(prefix: string, value: unknown): string {
 	const digest = createHash('sha256').update(JSON.stringify(value)).digest('hex');
 	return `n8n_webhook_${prefix}_${digest}`;
 }
 
-function clearRegistration(data: SentTriggerStaticData, clearCreationAttempt = false): void {
+function creationIdempotencyKey(
+	context: IHookFunctions,
+	configuration: WebhookConfiguration,
+	data: SentTriggerStaticData,
+): string {
+	const workflowId = context.getWorkflow().id ?? configuration.endpoint_url;
+	const generation = data.webhookCreationGeneration?.trim() || 'initial';
+	return mutationIdempotencyKey('create', {
+		workflowId,
+		nodeId: context.getNode().id,
+		generation,
+		configuration,
+	});
+}
+
+function clearLegacyCreationAttempt(data: SentTriggerStaticData): void {
+	delete data.webhookCreationIdempotencyKey;
+	delete data.webhookCreationFingerprint;
+}
+
+function clearCreationGeneration(data: SentTriggerStaticData): void {
+	delete data.webhookCreationGeneration;
+	clearLegacyCreationAttempt(data);
+}
+
+function prepareNextCreation(data: SentTriggerStaticData, previousWebhookId: string): void {
 	delete data.webhookId;
 	delete data.signingSecret;
-	if (clearCreationAttempt) {
-		delete data.webhookCreationIdempotencyKey;
-		delete data.webhookCreationFingerprint;
-	}
+	data.webhookCreationGeneration = previousWebhookId;
+	clearLegacyCreationAttempt(data);
 }
 
 function invalidEnvelopeResponse(
@@ -361,7 +373,9 @@ export class SentTrigger implements INodeType {
 			async checkExists(this: IHookFunctions): Promise<boolean> {
 				const data = staticData(this);
 				if (!data.webhookId) {
+					delete data.webhookId;
 					delete data.signingSecret;
+					clearLegacyCreationAttempt(data);
 					return false;
 				}
 				const webhookId = data.webhookId;
@@ -385,7 +399,7 @@ export class SentTrigger implements INodeType {
 							path: `/v3/webhooks/${encodeURIComponent(webhookId)}`,
 							idempotencyKey: mutationIdempotencyKey('delete', webhookId),
 						});
-						clearRegistration(data, true);
+						prepareNextCreation(data, webhookId);
 						return false;
 					}
 
@@ -405,12 +419,11 @@ export class SentTrigger implements INodeType {
 						});
 					}
 
-					delete data.webhookCreationIdempotencyKey;
-					delete data.webhookCreationFingerprint;
+					clearCreationGeneration(data);
 					return true;
 				} catch (error) {
 					if (isNotFound(error)) {
-						clearRegistration(data, true);
+						prepareNextCreation(data, webhookId);
 						return false;
 					}
 					throw new NodeOperationError(this.getNode(), error as Error);
@@ -420,40 +433,53 @@ export class SentTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const desired = desiredWebhookConfiguration(this);
 				const data = staticData(this);
-				const fingerprint = configurationFingerprint(desired);
-				if (
-					!data.webhookCreationIdempotencyKey ||
-					data.webhookCreationFingerprint !== fingerprint
-				) {
-					data.webhookCreationIdempotencyKey = `n8n_webhook_create_${randomUUID()}`;
-					data.webhookCreationFingerprint = fingerprint;
-				}
 
 				const envelope = await sentApiRequest.call(this, {
 					method: 'POST',
 					path: '/v3/webhooks',
 					body: desired,
-					idempotencyKey: data.webhookCreationIdempotencyKey,
+					// n8n persists workflow static data only after activation succeeds. Deriving
+					// this key means a lost POST response is retried with the same key even after
+					// restart, while a deleted webhook's ID rotates the next creation generation.
+					idempotencyKey: creationIdempotencyKey(this, desired, data),
 				});
 				const webhook = envelope.data as SentWebhook | undefined;
-				if (webhook?.id) data.webhookId = webhook.id;
-				if (!webhook?.id || !isValidSentSigningSecret(webhook.signing_secret)) {
+				if (!webhook?.id) {
+					throw new NodeOperationError(this.getNode(), 'Sent did not return a webhook ID');
+				}
+				if (!isValidSentSigningSecret(webhook.signing_secret)) {
+					try {
+						await sentApiRequest.call(this, {
+							method: 'DELETE',
+							path: `/v3/webhooks/${encodeURIComponent(webhook.id)}`,
+							idempotencyKey: mutationIdempotencyKey('delete', webhook.id),
+						});
+					} catch (error) {
+						if (!isNotFound(error)) {
+							throw new NodeOperationError(this.getNode(), error as Error, {
+								message:
+									'Sent returned a webhook without a valid signing secret, and cleanup failed',
+							});
+						}
+					}
+					prepareNextCreation(data, webhook.id);
 					throw new NodeOperationError(
 						this.getNode(),
-						'Sent did not return a webhook ID and signing secret',
+						'Sent did not return a valid signing secret; the unusable webhook was removed',
 					);
 				}
 				data.webhookId = webhook.id;
 				data.signingSecret = webhook.signing_secret;
-				delete data.webhookCreationIdempotencyKey;
-				delete data.webhookCreationFingerprint;
+				clearCreationGeneration(data);
 				return true;
 			},
 
 			async delete(this: IHookFunctions): Promise<boolean> {
 				const data = staticData(this);
 				if (!data.webhookId) {
-					clearRegistration(data, true);
+					delete data.webhookId;
+					delete data.signingSecret;
+					clearLegacyCreationAttempt(data);
 					return true;
 				}
 				const webhookId = data.webhookId;
@@ -468,7 +494,7 @@ export class SentTrigger implements INodeType {
 						throw new NodeOperationError(this.getNode(), error as Error);
 					}
 				}
-				clearRegistration(data, true);
+				prepareNextCreation(data, webhookId);
 				return true;
 			},
 		},
@@ -537,10 +563,9 @@ export class SentTrigger implements INodeType {
 			return invalidEnvelopeResponse(this, 'Sent webhook body has an invalid message event');
 		}
 		const eventName = signedEventName;
-		const eventSubtype =
-			eventName.includes('.')
-				? eventName.split('.').slice(1).join('.')
-				: undefined;
+		const eventSubtype = eventName.includes('.')
+			? eventName.split('.').slice(1).join('.')
+			: undefined;
 
 		return {
 			workflowData: [

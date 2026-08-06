@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-06  
 Branch: `few-fixes-before-submission`  
-Checkpoint commit: `636d424`
+Checkpoint commit: `ff180fe`
 
 ## Objective
 
@@ -16,10 +16,10 @@ Prepare `@sentdm/n8n-nodes-sent` for n8n Creator Hub submission and official-nod
 - [x] Trigger inputs, signatures, replay tolerance, malformed deliveries, and deduplication received expanded tests.
 - [x] Release metadata, codex category, publishing workflow, verification docs, and first-publish/OIDC handoff were updated.
 - [x] `@n8n/node-cli` is pinned to `0.42.1` in the npm manifest and lockfile.
-- [x] The pre-red-team remediation suite passed lint, strict TypeScript, build, and 13 test files / 282 tests with the previously installed CLI 0.42.0.
-- [x] The package dry run contained 27 intended files and no tests or source TypeScript.
-- [x] The production dependency audit reported zero vulnerabilities.
-- [ ] The latest trigger changes are still in progress and have not passed a clean gate.
+- [x] The latest canonical-envelope and durable trigger-creation changes passed formatting, lint, strict TypeScript, build, and 13 test files / 282 tests with the previously installed CLI 0.42.0 compatibility tree.
+- [x] The latest package dry run contained 27 intended files and no tests, source TypeScript, or source maps.
+- [x] The offline production dependency audit reported zero vulnerabilities.
+- [ ] The exact clean `npm ci` gate with CLI 0.42.1 remains pending because the review environment could not resolve `registry.npmjs.org`, and its network escalation failed in the approval service.
 - [ ] No npm publish, Git tag, Creator Hub submission, or other public release action has been performed as part of this work.
 
 ## Remaining work in recommended order
@@ -34,7 +34,7 @@ Sent's current Events Reference uses the signed body field `sub_type`, while the
 - [x] Restrict the static fallback to the seven documented message suffixes: `queued`, `routed`, `sent`, `delivered`, `read`, `failed`, and `received`.
 - [x] Convert trigger fixtures to canonical `sub_type` payloads.
 - [x] Strengthen the redelivery test so it proves a real, non-undefined idempotency key is emitted.
-- [ ] Run formatter, lint, TypeScript, and trigger tests for these edits.
+- [x] Run formatter, lint, TypeScript, and trigger tests for these edits with the available CLI 0.42.0 compatibility tree.
 
 Files currently involved:
 
@@ -49,15 +49,16 @@ Files currently involved:
 
 The current random creation key is written to workflow static data immediately before the POST. n8n normally persists that static data only after activation succeeds, so a lost response followed by a restart can generate a new key and create an orphan webhook.
 
-- [ ] Replace reliance on the pre-POST random value with a deterministic creation key.
-- [ ] Derive the key from workflow identity, node identity, desired webhook configuration, and a creation generation.
-- [ ] Use a stable initial generation for the first activation.
-- [ ] After deletion, remote 404 recovery, or replacement of a webhook with an unusable local secret, retain the old webhook ID as the next generation.
-- [ ] Clear the generation only after a new webhook ID and valid signing secret are safely stored.
-- [ ] If Sent returns a webhook ID without a valid secret, clean up that remote webhook when possible before failing activation.
-- [ ] Add a regression that retries with a fresh static-data object to simulate restart/non-persistence and asserts the same creation key.
-- [ ] Add a regression proving delete/recreate uses a new key, while a same-generation retry reuses its key.
-- [ ] Update README wording from a "persisted request key" to the deterministic recovery behavior.
+- [x] Replace reliance on the pre-POST random value with a deterministic creation key.
+- [x] Derive the key from workflow identity, node identity, desired webhook configuration, and a creation generation.
+- [x] Use a stable initial generation for the first activation.
+- [x] After deletion, remote 404 recovery, or replacement of a webhook with an unusable local secret, retain the old webhook ID as the next generation.
+- [x] Clear the generation only after a new webhook ID and valid signing secret are safely stored.
+- [x] If Sent returns a webhook ID without a valid secret, clean up that remote webhook when possible before failing activation.
+- [x] Add a regression that retries with a fresh static-data object to simulate restart/non-persistence and asserts the same creation key.
+- [x] Add a regression proving delete/recreate uses a new key, while a same-generation retry reuses its key.
+- [x] Update README wording from a "persisted request key" to the deterministic recovery behavior.
+- [x] Run formatter, lint, TypeScript, and lifecycle tests for these edits with the available CLI 0.42.0 compatibility tree.
 
 ### 3. Run the clean local release gate
 
@@ -114,8 +115,6 @@ Accepted limitation: if a signing secret is rotated directly in Sent, deactivate
 
 Do not publish or submit while any of these remain:
 
-- Canonical `sub_type` trigger changes are unverified.
-- Create-webhook idempotency still depends on static data that may not persist after failed activation.
 - The exact clean `npm ci` gate with CLI 0.42.1 has not passed.
 - Live Sent/n8n lifecycle and security checks are incomplete.
 - Repository/package/provenance/scanner evidence is not public and verified.

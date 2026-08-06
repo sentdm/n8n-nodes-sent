@@ -6,6 +6,7 @@ import { SentTrigger } from '../nodes/SentTrigger/SentTrigger.node';
 interface FakeStaticData {
 	webhookId?: string;
 	signingSecret?: string;
+	webhookCreationGeneration?: string;
 	webhookCreationIdempotencyKey?: string;
 	webhookCreationFingerprint?: string;
 }
@@ -33,6 +34,7 @@ function hookContext(
 	for (const response of responses) httpRequestWithAuthentication.mockResolvedValueOnce(response);
 	return {
 		getNode: () => ({
+			id: 'node-1',
 			name: 'Sent Trigger',
 			type: 'test.sentTrigger',
 			typeVersion: 1,
@@ -41,6 +43,7 @@ function hookContext(
 		}),
 		getNodeParameter: (name: string, fallback?: unknown) => parameters[name] ?? fallback,
 		getNodeWebhookUrl: () => 'https://n8n.example.com/webhook/sent',
+		getWorkflow: () => ({ id: 'workflow-1', name: 'Workflow', active: true }),
 		getWorkflowStaticData: () => data,
 		helpers: { httpRequestWithAuthentication },
 	};
@@ -79,12 +82,19 @@ describe('Sent Trigger lifecycle', () => {
 	});
 
 	it('confirms an existing webhook without creating a duplicate', async () => {
-		const data = { webhookId: 'wh-1', signingSecret: 'whsec_dGVzdA==' };
+		const data: FakeStaticData = {
+			webhookId: 'wh-1',
+			signingSecret: 'whsec_dGVzdA==',
+			webhookCreationGeneration: 'stale-generation',
+			webhookCreationIdempotencyKey: 'legacy-key',
+			webhookCreationFingerprint: 'legacy-fingerprint',
+		};
 		const context = hookContext(data, [
 			{ statusCode: 200, headers: {}, body: { success: true, data: remoteWebhook() } },
 		]);
 		await expect(methods.checkExists.call(context as never)).resolves.toBe(true);
 		expect(context.helpers.httpRequestWithAuthentication).toHaveBeenCalledTimes(1);
+		expect(data).toEqual({ webhookId: 'wh-1', signingSecret: 'whsec_dGVzdA==' });
 	});
 
 	it.each([
@@ -98,7 +108,7 @@ describe('Sent Trigger lifecycle', () => {
 		]);
 
 		await expect(methods.checkExists.call(context as never)).resolves.toBe(false);
-		expect(data).toEqual({});
+		expect(data).toEqual({ webhookCreationGeneration: 'wh-1' });
 		expect(context.helpers.httpRequestWithAuthentication.mock.calls[1][1]).toMatchObject({
 			method: 'DELETE',
 			url: 'https://api.sent.dm/v3/webhooks/wh-1',
@@ -181,7 +191,7 @@ describe('Sent Trigger lifecycle', () => {
 		});
 	});
 
-	it('clears stale static data when Sent returns 404', async () => {
+	it('retains a new creation generation when Sent returns 404', async () => {
 		const data = { webhookId: 'wh-missing', signingSecret: 'whsec_dGVzdA==' };
 		const context = hookContext(data, [
 			{
@@ -191,7 +201,7 @@ describe('Sent Trigger lifecycle', () => {
 			},
 		]);
 		await expect(methods.checkExists.call(context as never)).resolves.toBe(false);
-		expect(data).toEqual({});
+		expect(data).toEqual({ webhookCreationGeneration: 'wh-missing' });
 	});
 
 	it('creates a webhook and stores only lifecycle secrets in static data', async () => {
@@ -222,16 +232,35 @@ describe('Sent Trigger lifecycle', () => {
 		});
 	});
 
-	it('reuses a persisted creation key after an ambiguous request failure', async () => {
-		const data: FakeStaticData = {};
-		const context = hookContext(
-			data,
+	it('reuses a deterministic creation key when failed activation static data was not saved', async () => {
+		const parameters = { eventTypes: ['message'], messageSubtypes: [], options: {} };
+		const failedData: FakeStaticData = {};
+		const failedContext = hookContext(
+			failedData,
 			[
 				{
 					statusCode: 500,
 					headers: {},
 					body: { success: false, error: { code: 'INTERNAL_001', message: 'Try again' } },
 				},
+			],
+			parameters,
+		);
+
+		await expect(methods.create.call(failedContext as never)).rejects.toThrow(/Try again/);
+		const failedKey =
+			failedContext.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers[
+				'Idempotency-Key'
+			];
+		expect(failedKey).toMatch(/^n8n_webhook_create_/);
+		expect(failedData).toEqual({});
+
+		// A failed activation is rebuilt from database state, so this deliberately uses a
+		// fresh object rather than reusing the mutation from the failed in-memory attempt.
+		const recoveredData: FakeStaticData = {};
+		const recoveredContext = hookContext(
+			recoveredData,
+			[
 				{
 					statusCode: 201,
 					headers: {},
@@ -241,21 +270,21 @@ describe('Sent Trigger lifecycle', () => {
 					},
 				},
 			],
-			{ eventTypes: ['message'], messageSubtypes: [], options: {} },
+			parameters,
 		);
-
-		await expect(methods.create.call(context as never)).rejects.toThrow(/Try again/);
-		const persistedKey = data.webhookCreationIdempotencyKey;
-		expect(persistedKey).toMatch(/^n8n_webhook_create_/);
-
-		await expect(methods.create.call(context as never)).resolves.toBe(true);
-		const requests = context.helpers.httpRequestWithAuthentication.mock.calls;
-		expect(requests[0][1].headers['Idempotency-Key']).toBe(persistedKey);
-		expect(requests[1][1].headers['Idempotency-Key']).toBe(persistedKey);
-		expect(data).toEqual({ webhookId: 'wh-recovered', signingSecret: 'whsec_dGVzdA==' });
+		await expect(methods.create.call(recoveredContext as never)).resolves.toBe(true);
+		const recoveredKey =
+			recoveredContext.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers[
+				'Idempotency-Key'
+			];
+		expect(recoveredKey).toBe(failedKey);
+		expect(recoveredData).toEqual({
+			webhookId: 'wh-recovered',
+			signingSecret: 'whsec_dGVzdA==',
+		});
 	});
 
-	it('rotates a pending creation key when the desired configuration changes', async () => {
+	it('changes the deterministic creation key when the desired configuration changes', async () => {
 		const data: FakeStaticData = {};
 		const parameters: Record<string, unknown> = {
 			eventTypes: ['message'],
@@ -280,10 +309,13 @@ describe('Sent Trigger lifecycle', () => {
 		);
 
 		await expect(methods.create.call(context as never)).rejects.toThrow();
-		const firstKey = data.webhookCreationIdempotencyKey;
+		const firstKey =
+			context.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers['Idempotency-Key'];
 		parameters.messageSubtypes = ['delivered'];
 		await expect(methods.create.call(context as never)).rejects.toThrow();
-		expect(data.webhookCreationIdempotencyKey).not.toBe(firstKey);
+		const secondKey =
+			context.helpers.httpRequestWithAuthentication.mock.calls[1][1].headers['Idempotency-Key'];
+		expect(secondKey).not.toBe(firstKey);
 	});
 
 	it.each([
@@ -303,35 +335,78 @@ describe('Sent Trigger lifecycle', () => {
 	});
 
 	it('fails creation when Sent omits the signing secret', async () => {
+		const data: FakeStaticData = {};
 		const context = hookContext(
-			{},
-			[{ statusCode: 201, headers: {}, body: { success: true, data: { id: 'wh-new' } } }],
+			data,
+			[
+				{ statusCode: 201, headers: {}, body: { success: true, data: { id: 'wh-new' } } },
+				{ statusCode: 204, headers: {} },
+			],
 			{ eventTypes: ['message'], messageSubtypes: [], options: {} },
 		);
 		await expect(methods.create.call(context as never)).rejects.toThrow(/signing secret/);
+		expect(context.helpers.httpRequestWithAuthentication.mock.calls[1][1]).toMatchObject({
+			method: 'DELETE',
+			url: 'https://api.sent.dm/v3/webhooks/wh-new',
+		});
+		expect(data).toEqual({ webhookCreationGeneration: 'wh-new' });
 	});
 
-	it('deletes the exact stored webhook and clears static data', async () => {
-		const data = { webhookId: 'wh-delete', signingSecret: 'whsec_dGVzdA==' };
-		const context = hookContext(data, [{ statusCode: 204, headers: {} }]);
-		await expect(methods.delete.call(context as never)).resolves.toBe(true);
-		expect(data).toEqual({});
-		const request = context.helpers.httpRequestWithAuthentication.mock.calls[0][1];
-		expect(request).toMatchObject({
+	it('rotates the creation key after deleting and recreating a webhook', async () => {
+		const data: FakeStaticData = {};
+		const firstCreate = hookContext(
+			data,
+			[
+				{
+					statusCode: 201,
+					headers: {},
+					body: { success: true, data: { id: 'wh-delete', signing_secret: 'whsec_dGVzdA==' } },
+				},
+			],
+			{ eventTypes: ['message'], messageSubtypes: [], options: {} },
+		);
+		await expect(methods.create.call(firstCreate as never)).resolves.toBe(true);
+		const firstKey =
+			firstCreate.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers['Idempotency-Key'];
+
+		const deletion = hookContext(data, [{ statusCode: 204, headers: {} }]);
+		await expect(methods.delete.call(deletion as never)).resolves.toBe(true);
+		expect(data).toEqual({ webhookCreationGeneration: 'wh-delete' });
+		expect(deletion.helpers.httpRequestWithAuthentication.mock.calls[0][1]).toMatchObject({
 			method: 'DELETE',
 			url: 'https://api.sent.dm/v3/webhooks/wh-delete',
 		});
+
+		const secondCreate = hookContext(
+			data,
+			[
+				{
+					statusCode: 201,
+					headers: {},
+					body: { success: true, data: { id: 'wh-next', signing_secret: 'whsec_dGVzdA==' } },
+				},
+			],
+			{ eventTypes: ['message'], messageSubtypes: [], options: {} },
+		);
+		await expect(methods.create.call(secondCreate as never)).resolves.toBe(true);
+		const secondKey =
+			secondCreate.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers[
+				'Idempotency-Key'
+			];
+		expect(secondKey).not.toBe(firstKey);
+		expect(data).toEqual({ webhookId: 'wh-next', signingSecret: 'whsec_dGVzdA==' });
 	});
 
-	it('treats an already-cleared webhook as successfully removed', async () => {
+	it('treats an already-cleared webhook as removed while retaining its next generation', async () => {
 		const pendingAttemptKey = ['n8n_webhook_create', 'pending'].join('_');
 		const data: FakeStaticData = {
+			webhookCreationGeneration: 'wh-prior',
 			webhookCreationIdempotencyKey: pendingAttemptKey,
 			webhookCreationFingerprint: 'fingerprint',
 		};
 		const context = hookContext(data);
 		await expect(methods.delete.call(context as never)).resolves.toBe(true);
-		expect(data).toEqual({});
+		expect(data).toEqual({ webhookCreationGeneration: 'wh-prior' });
 		expect(context.helpers.httpRequestWithAuthentication).not.toHaveBeenCalled();
 	});
 });
