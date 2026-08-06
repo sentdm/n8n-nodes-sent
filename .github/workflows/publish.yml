@@ -1,5 +1,11 @@
 name: Publish
 
+# npm Trusted Publishing can only be configured after a package exists. For the first
+# release, set a short-lived NPM_TOKEN repository secret and let this same workflow do
+# the publish. The token is optional: after Trusted Publishing is configured, remove it
+# and npm 11 will authenticate through this job's OIDC token instead. Both paths publish
+# from GitHub Actions with public access and npm provenance.
+
 on:
   push:
     tags: ['*.*.*']
@@ -59,9 +65,17 @@ jobs:
       # scan live only in CI: tag a commit that CI has run on.
       - name: Publish with provenance
         env:
+          # Temporary bootstrap fallback, following the official n8n starter workflow.
+          # Leave unset for normal OIDC Trusted Publisher releases.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           NPM_CONFIG_ACCESS: public
-        run: npm run release
+        shell: bash
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
+          npm run release
 
       - name: Scan published package
         shell: bash
