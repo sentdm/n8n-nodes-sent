@@ -11,7 +11,7 @@ interface DeliveryOverrides {
 	storedSecret?: string;
 }
 
-function delivery(event: Record<string, unknown>, overrides: DeliveryOverrides = {}) {
+function delivery(event: unknown, overrides: DeliveryOverrides = {}) {
 	const signedBody = Buffer.from(JSON.stringify(event));
 	const webhookId = 'webhook-output-test';
 	const timestamp = String(Math.floor(Date.now() / 1000));
@@ -25,7 +25,11 @@ function delivery(event: Record<string, unknown>, overrides: DeliveryOverrides =
 			'x-webhook-id': webhookId,
 			'x-webhook-timestamp': timestamp,
 			'x-webhook-signature': signature,
-			'x-webhook-event-type': String(event.event),
+			'x-webhook-event-type': String(
+				typeof event === 'object' && event !== null && !Array.isArray(event)
+					? (event as Record<string, unknown>).event
+					: undefined,
+			),
 			...overrides.headers,
 		},
 		readRawBody: async () => rawBody,
@@ -48,7 +52,7 @@ function delivery(event: Record<string, unknown>, overrides: DeliveryOverrides =
 	return { context, writeHead, end };
 }
 
-async function deliver(event: Record<string, unknown>, overrides: DeliveryOverrides = {}) {
+async function deliver(event: unknown, overrides: DeliveryOverrides = {}) {
 	const { context, writeHead, end } = delivery(event, overrides);
 	const result = await new SentTrigger().webhook.call(context as never);
 	return { result, writeHead, end };
@@ -65,7 +69,7 @@ describe('Sent Trigger normalized output', () => {
 				payload: { message_id: 'm1', message_status: 'DELIVERED' },
 			},
 			'delivered',
-			'm1:DELIVERED',
+			'm1:DELIVERED:2026-08-04T00:00:00Z',
 		],
 		[
 			'inbound message',
@@ -76,7 +80,7 @@ describe('Sent Trigger normalized output', () => {
 				payload: { message_id: 'm2', text: 'Synthetic inbound text' },
 			},
 			'received',
-			'm2:message.received',
+			'm2:message.received:2026-08-04T00:00:00Z',
 		],
 		[
 			'template event',
@@ -87,7 +91,7 @@ describe('Sent Trigger normalized output', () => {
 				payload: { template_id: 't1', status: 'APPROVED' },
 			},
 			'approved',
-			't1:APPROVED',
+			't1:APPROVED:2026-08-04T00:00:00Z',
 		],
 	])('normalizes a verified %s event', async (_label, event, subtype, idempotencyKey) => {
 		const { result } = await deliver(event);
@@ -103,6 +107,24 @@ describe('Sent Trigger normalized output', () => {
 		});
 		expect(JSON.stringify(json)).not.toContain(secret);
 		expect(JSON.stringify(json)).not.toContain('x-webhook-signature');
+	});
+
+	it('normalizes a template event whose body omits the optional event name', async () => {
+		const event = {
+			field: 'templates',
+			timestamp: '2026-08-04T00:00:00Z',
+			payload: { template_id: 't1', status: 'APPROVED' },
+		};
+		const { result } = await deliver(event, {
+			headers: { 'x-webhook-event-type': 'templates' },
+		});
+
+		expect(result.workflowData?.[0]?.[0]?.json).toMatchObject({
+			field: 'templates',
+			event: 'templates',
+			payload: event.payload,
+			idempotencyKey: 't1:APPROVED:2026-08-04T00:00:00Z',
+		});
 	});
 });
 
@@ -139,7 +161,7 @@ describe('Sent Trigger signature rejection', () => {
 
 	it('rejects a body that passes signing but is not JSON', async () => {
 		const notJson = Buffer.from('this is not json');
-		const { context } = delivery({}, { rawBody: notJson });
+		const { context, writeHead, end } = delivery({}, { rawBody: notJson });
 		// Re-sign the non-JSON body so verification succeeds and parsing is what fails.
 		const headers = context.getRequestObject().headers;
 		headers['x-webhook-signature'] = computeSentSignature(
@@ -149,8 +171,50 @@ describe('Sent Trigger signature rejection', () => {
 			secret,
 		);
 
-		await expect(new SentTrigger().webhook.call(context as never)).rejects.toThrow(
-			/not valid JSON/,
-		);
+		await expect(new SentTrigger().webhook.call(context as never)).resolves.toEqual({
+			noWebhookResponse: true,
+		});
+		expect(writeHead).toHaveBeenCalledWith(400, { 'Content-Type': 'application/json' });
+		expect(String(end.mock.calls[0][0])).toContain('not valid JSON');
+	});
+
+	it.each([
+		['null', null],
+		['an array', []],
+		['a missing field', { timestamp: '2026-08-04T00:00:00Z', payload: {} }],
+		['a missing timestamp', { field: 'message', event: 'message.sent', payload: {} }],
+		[
+			'an invalid timestamp',
+			{ field: 'message', event: 'message.sent', timestamp: 'not-a-date', payload: {} },
+		],
+		[
+			'a missing payload',
+			{ field: 'message', event: 'message.sent', timestamp: '2026-08-04T00:00:00Z' },
+		],
+		[
+			'an array payload',
+			{
+				field: 'message',
+				event: 'message.sent',
+				timestamp: '2026-08-04T00:00:00Z',
+				payload: [],
+			},
+		],
+		[
+			'a message without a message event',
+			{ field: 'message', timestamp: '2026-08-04T00:00:00Z', payload: {} },
+		],
+	])('answers 400 and starts no execution for a signed envelope containing %s', async (_label, event) => {
+		const { result, writeHead, end } = await deliver(event, {
+			headers: {
+				'x-webhook-event-type':
+					_label === 'a message without a message event' ? undefined : 'message.sent',
+			},
+		});
+
+		expect(result).toEqual({ noWebhookResponse: true });
+		expect(result.workflowData).toBeUndefined();
+		expect(writeHead).toHaveBeenCalledWith(400, { 'Content-Type': 'application/json' });
+		expect(end).toHaveBeenCalledTimes(1);
 	});
 });

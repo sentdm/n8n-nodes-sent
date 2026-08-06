@@ -1,7 +1,7 @@
 import { getNodeParameters } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
 
-import { sentProperties } from '../nodes/Sent/actions/properties';
+import { SENT_SIMPLIFIED_OUTPUT_FIELDS, sentProperties } from '../nodes/Sent/actions/properties';
 
 describe('Sent action parameter schema', () => {
 	it('contains no display dependencies inside collection children', () => {
@@ -65,5 +65,60 @@ describe('Sent action parameter schema', () => {
 		);
 
 		expect(resolved).not.toHaveProperty('requestOptions');
+	});
+
+	it("uses a searchable 'From List' Resource Locator for contacts", () => {
+		const contact = sentProperties.find((property) => property.name === 'contactId');
+
+		expect(contact).toMatchObject({
+			type: 'resourceLocator',
+			default: { mode: 'list', value: '' },
+			required: true,
+		});
+		expect(contact?.modes?.[0]).toMatchObject({
+			displayName: 'From List',
+			name: 'list',
+			type: 'list',
+			typeOptions: { searchListMethod: 'getContacts', searchable: true },
+		});
+	});
+
+	it('offers the three required AI-tool output modes', () => {
+		const output = sentProperties.find((property) => property.name === 'output');
+
+		expect(output?.default).toBe('simple');
+		expect(output?.options).toEqual([
+			{ name: 'Simplified', value: 'simple' },
+			{ name: 'Raw', value: 'raw' },
+			{ name: 'Selected Fields', value: 'fields' },
+		]);
+		expect(output?.displayOptions?.show).toEqual({
+			resource: ['account', 'contact', 'message'],
+			operation: ['get', 'getMany'],
+		});
+	});
+
+	it('limits every simplified entity shape to 10 fields and always includes ID', () => {
+		for (const fields of Object.values(SENT_SIMPLIFIED_OUTPUT_FIELDS)) {
+			expect(fields).toContain('id');
+			expect(fields.length).toBeLessThanOrEqual(10);
+		}
+	});
+
+	it("shows resource-specific field selectors only for 'Selected Fields' output", () => {
+		const selectors = sentProperties.filter((property) => property.name === 'fields');
+
+		expect(selectors).toHaveLength(3);
+		expect(
+			selectors.map((selector) => ({
+				resource: selector.displayOptions?.show?.resource,
+				operation: selector.displayOptions?.show?.operation,
+				output: selector.displayOptions?.show?.output,
+			})),
+		).toEqual([
+			{ resource: ['account'], operation: ['get'], output: ['fields'] },
+			{ resource: ['contact'], operation: ['get', 'getMany'], output: ['fields'] },
+			{ resource: ['message'], operation: ['get'], output: ['fields'] },
+		]);
 	});
 });

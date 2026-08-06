@@ -89,6 +89,10 @@ describe('operation naming conforms to the n8n UX guidelines', () => {
 		expect(operation.description, 'operation is missing a description').toBeTruthy();
 	});
 
+	it.each(cases)('%s description includes the resource', (_label, operation) => {
+		expect(operation.description?.toLowerCase()).toContain(operation.resourceLabel.toLowerCase());
+	});
+
 	// Vocabulary section: a list-of-resources operation is named "Get Many".
 	it.each(cases.filter(([, o]) => o.value === 'getMany' || o.value === 'getAll'))(
 		'%s uses the standard "Get Many" label',

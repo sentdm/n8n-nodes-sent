@@ -41,6 +41,11 @@ describe('Sent API credential', () => {
 			required: true,
 			typeOptions: { password: true },
 		});
+		expect(credential.properties[1]).toMatchObject({
+			name: 'profileId',
+			default: '',
+		});
+		expect(credential.properties[1]).not.toHaveProperty('required');
 	});
 });
 

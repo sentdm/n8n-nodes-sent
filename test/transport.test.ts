@@ -31,6 +31,7 @@ function contextWithResponses(...responses: unknown[]) {
 	const httpRequestWithAuthentication = vi.fn();
 	for (const response of responses) httpRequestWithAuthentication.mockResolvedValueOnce(response);
 	return {
+		getCredentials: vi.fn().mockResolvedValue({}),
 		getNode: () => ({
 			name: 'Sent',
 			type: 'test.sent',
@@ -92,6 +93,22 @@ describe('Sent transport', () => {
 			returnFullResponse: true,
 			ignoreHttpStatusErrors: true,
 			json: true,
+		});
+	});
+
+	it('adds a child profile header only when the credential configures one', async () => {
+		const context = contextWithResponses({
+			statusCode: 200,
+			headers: {},
+			body: { success: true, data: {} },
+		});
+		context.getCredentials.mockResolvedValueOnce({ profileId: '  profile-123  ' });
+
+		await sentApiRequest.call(context as never, { method: 'GET', path: '/v3/me' });
+
+		expect(context.helpers.httpRequestWithAuthentication.mock.calls[0][1].headers).toEqual({
+			Accept: 'application/json',
+			'x-profile-id': 'profile-123',
 		});
 	});
 

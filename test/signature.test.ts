@@ -82,10 +82,33 @@ describe('Sent webhook signature verification', () => {
 	it('derives a transition-specific message idempotency key', () => {
 		expect(
 			deriveEventIdempotencyKey(
-				{ event: 'message.delivered', payload: { message_id: 'm1', message_status: 'DELIVERED' } },
+				{
+					event: 'message.delivered',
+					timestamp: '2026-08-04T00:00:00Z',
+					payload: { message_id: 'm1', message_status: 'DELIVERED' },
+				},
 				rawBody,
 			),
-		).toBe('m1:DELIVERED');
+		).toBe('m1:DELIVERED:2026-08-04T00:00:00Z');
+	});
+
+	it('collapses exact redeliveries but distinguishes a later repeated transition', () => {
+		const firstBody = Buffer.from(
+			'{"field":"message","event":"message.routed","timestamp":"2026-08-04T00:00:00Z","payload":{"message_id":"m1","message_status":"ROUTED","updated_at":"2026-08-04T00:00:00Z","channel":"sms"}}',
+		);
+		const laterBody = Buffer.from(
+			'{"field":"message","event":"message.routed","timestamp":"2026-08-04T00:01:00Z","payload":{"message_id":"m1","message_status":"ROUTED","updated_at":"2026-08-04T00:01:00Z","channel":"whatsapp"}}',
+		);
+		const first = JSON.parse(firstBody.toString('utf8'));
+		const redelivery = JSON.parse(firstBody.toString('utf8'));
+		const later = JSON.parse(laterBody.toString('utf8'));
+
+		expect(deriveEventIdempotencyKey(first, firstBody)).toBe(
+			deriveEventIdempotencyKey(redelivery, firstBody),
+		);
+		expect(deriveEventIdempotencyKey(later, laterBody)).not.toBe(
+			deriveEventIdempotencyKey(first, firstBody),
+		);
 	});
 
 	it('derives a body-stable hash fallback when the event has no resource ID', () => {

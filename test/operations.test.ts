@@ -67,7 +67,7 @@ const matrix: Row[] = [
 	{
 		resource: 'contact',
 		operation: 'get',
-		parameters: { contactId: 'c1' },
+		parameters: { contactId: { mode: 'list', value: 'c1' } },
 		expected: { method: 'GET', path: '/v3/contacts/c1' },
 	},
 	{
@@ -225,9 +225,9 @@ describe('Sent operation request bodies', () => {
 				messageTemplate: { mode: 'id', value: '' },
 				templateParameters: '{}',
 			},
-			/Template is required/,
+			/'Template' is required/,
 		],
-		['a text body that resolves empty', { messageType: 'text', text: '' }, /Text is required/],
+		['a text body that resolves empty', { messageType: 'text', text: '' }, /'Text' is required/],
 	])('refuses to send a message with %s', (_label, extra, message) => {
 		// `required: true` is only an editor-time check on the stored value, so an
 		// expression resolving to '' would otherwise reach compactObject and post a
@@ -256,7 +256,7 @@ describe('Sent operation request bodies', () => {
 				'message',
 				'send',
 			),
-		).toThrow(/Template Parameters must contain a JSON object/);
+		).toThrow(/'Template Parameters' must contain a JSON object/);
 	});
 
 	it('reports malformed JSON text as a parse problem', () => {
@@ -273,12 +273,12 @@ describe('Sent operation request bodies', () => {
 				'message',
 				'send',
 			),
-		).toThrow(/Template Parameters is not valid JSON/);
+		).toThrow(/'Template Parameters' is not valid JSON/);
 	});
 
 	it('URL-encodes an identifier that contains path characters', () => {
 		const request = buildOperation(
-			executeContext({ contactId: 'a/b?c' }) as never,
+			executeContext({ contactId: { mode: 'id', value: 'a/b?c' } }) as never,
 			0,
 			'contact',
 			'get',
@@ -289,13 +289,58 @@ describe('Sent operation request bodies', () => {
 
 	// The message must name the field as the UI labels it, never the internal parameter.
 	it.each([
-		['contact', 'get', 'Contact ID'],
+		['contact', 'get', 'Contact'],
 		['message', 'get', 'Message ID'],
 		['message', 'getActivities', 'Message ID'],
 		['numberLookup', 'lookup', 'Phone Number'],
 	])('%s.%s reports the missing field by its display name', (resource, operation, label) => {
 		expect(() => buildOperation(executeContext({}) as never, 0, resource, operation)).toThrow(
-			`${label} is required`,
+			`'${label}' is required`,
 		);
+	});
+
+	it('continues to accept the scalar contact ID stored by version 1 workflows', () => {
+		const request = buildOperation(
+			executeContext({ contactId: 'legacy-contact-id' }) as never,
+			0,
+			'contact',
+			'get',
+		);
+
+		expect(request.path).toBe('/v3/contacts/legacy-contact-id');
+	});
+
+	it('does not combine automatic routing with an explicit channel', () => {
+		expect(() =>
+			buildOperation(
+				executeContext({
+					recipients: '+14155550123',
+					channels: ['sent', 'sms'],
+					messageType: 'text',
+					text: 'Hello',
+				}) as never,
+				0,
+				'message',
+				'send',
+			),
+		).toThrow(/'Channels' cannot combine 'Sent \(Automatic Routing\)'/);
+	});
+
+	it('rejects more than 1,000 recipients before sending', () => {
+		const recipients = Array.from({ length: 1_001 }, (_, index) => `+1415555${index}`).join(',');
+
+		expect(() =>
+			buildOperation(
+				executeContext({
+					recipients,
+					channels: ['sent'],
+					messageType: 'text',
+					text: 'Hello',
+				}) as never,
+				0,
+				'message',
+				'send',
+			),
+		).toThrow(/'Recipients' can contain at most 1,000 phone numbers/);
 	});
 });
