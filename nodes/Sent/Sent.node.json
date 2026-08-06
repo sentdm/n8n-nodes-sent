@@ -2,7 +2,7 @@
 	"node": "@sentdm/n8n-nodes-sent.sent",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
-	"categories": ["Communication", "Marketing"],
+	"categories": ["Communication", "Marketing & Content"],
 	"resources": {
 		"credentialDocumentation": [
 			{

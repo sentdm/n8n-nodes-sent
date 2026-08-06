@@ -121,6 +121,19 @@ export async function sentApiRequest(
 
 	let response: SentHttpResponse;
 	try {
+		// Keep the credential's declarative authentication for the required API key (the
+		// verified-node linter requires it), and add this optional header only when a parent
+		// organization explicitly selects a child profile. Sending an empty x-profile-id can
+		// change API validation semantics, so it must be omitted rather than rendered as ''.
+		if (typeof this.getCredentials === 'function') {
+			const credentials = await this.getCredentials<{ profileId?: unknown }>(
+				'sentApi',
+				request.itemIndex,
+			);
+			const profileId =
+				typeof credentials.profileId === 'string' ? credentials.profileId.trim() : '';
+			if (profileId) headers['x-profile-id'] = profileId;
+		}
 		response = (await this.helpers.httpRequestWithAuthentication.call(
 			this,
 			'sentApi',

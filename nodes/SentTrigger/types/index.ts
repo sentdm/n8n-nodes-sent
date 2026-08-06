@@ -3,6 +3,8 @@ import type { IDataObject } from 'n8n-workflow';
 export interface SentTriggerStaticData extends IDataObject {
 	webhookId?: string;
 	signingSecret?: string;
+	webhookCreationIdempotencyKey?: string;
+	webhookCreationFingerprint?: string;
 }
 
 export interface SentIncomingEvent extends IDataObject {
