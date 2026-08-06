@@ -46,7 +46,7 @@ function baseRequest(
 	if (idempotencyKey && (idempotencyKey.length > 255 || !/^[A-Za-z0-9_-]+$/.test(idempotencyKey))) {
 		throw new NodeOperationError(
 			context.getNode(),
-			'Idempotency Key must be 1-255 letters, numbers, hyphens, or underscores',
+			"'Idempotency Key' must be 1-255 letters, numbers, hyphens, or underscores",
 			{ itemIndex },
 		);
 	}
@@ -68,13 +68,17 @@ const labelByParameter = new Map(
 );
 
 function identifier(context: IExecuteFunctions, itemIndex: number, name: string): string {
-	const value = parameter(context, name, itemIndex).trim();
+	const rawValue = context.getNodeParameter(name, itemIndex, '', { extractValue: true });
+	// Resource Locators resolve to a scalar in n8n, while lightweight execution mocks and
+	// old stored workflows can still supply the `{ mode, value }` shape or a plain string.
+	const value = String(
+		typeof rawValue === 'object' && rawValue !== null && 'value' in rawValue
+			? ((rawValue as { value?: unknown }).value ?? '')
+			: rawValue,
+	).trim();
 	if (!value) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`${labelByParameter.get(name) ?? name} is required`,
-			{ itemIndex },
-		);
+		const label = labelByParameter.get(name) ?? name;
+		throw new NodeOperationError(context.getNode(), `'${label}' is required`, { itemIndex });
 	}
 	return encodeURIComponent(value);
 }
@@ -119,14 +123,48 @@ export function buildOperation(
 				.map((value) => value.trim())
 				.filter(Boolean);
 			if (recipients.length === 0) {
-				throw new NodeOperationError(context.getNode(), 'At least one recipient is required', {
+				throw new NodeOperationError(
+					context.getNode(),
+					"At least one recipient is required in 'Recipients'",
+					{
+						itemIndex,
+					},
+				);
+			}
+			if (recipients.length > 1_000) {
+				throw new NodeOperationError(
+					context.getNode(),
+					"'Recipients' can contain at most 1,000 phone numbers",
+					{ itemIndex },
+				);
+			}
+			const messageType = parameter(context, 'messageType', itemIndex);
+			const channelsValue = context.getNodeParameter('channels', itemIndex, ['sent']);
+			if (!Array.isArray(channelsValue)) {
+				throw new NodeOperationError(context.getNode(), "'Channels' must contain a list", {
 					itemIndex,
 				});
 			}
-			const messageType = parameter(context, 'messageType', itemIndex);
-			const selectedChannels = context.getNodeParameter('channels', itemIndex, [
-				'sent',
-			]) as string[];
+			const selectedChannels = [
+				...new Set(channelsValue.map((channel) => String(channel).trim()).filter(Boolean)),
+			];
+			const unknownChannel = selectedChannels.find(
+				(channel) => !['sent', 'rcs', 'sms', 'whatsapp'].includes(channel),
+			);
+			if (unknownChannel) {
+				throw new NodeOperationError(
+					context.getNode(),
+					`'Channels' contains the unsupported value '${unknownChannel}'`,
+					{ itemIndex },
+				);
+			}
+			if (selectedChannels.includes('sent') && selectedChannels.length > 1) {
+				throw new NodeOperationError(
+					context.getNode(),
+					"'Channels' cannot combine 'Sent (Automatic Routing)' with an explicit channel",
+					{ itemIndex },
+				);
+			}
 			const body: SentMessageRequest = {
 				to: recipients,
 				channel: selectedChannels.length > 0 ? selectedChannels : ['sent'],
@@ -137,7 +175,7 @@ export function buildOperation(
 			if (messageType === 'text') {
 				const text = parameter(context, 'text', itemIndex);
 				if (!text) {
-					throw new NodeOperationError(context.getNode(), 'Text is required', { itemIndex });
+					throw new NodeOperationError(context.getNode(), "'Text' is required", { itemIndex });
 				}
 				body.text = text;
 			} else {
@@ -147,7 +185,9 @@ export function buildOperation(
 				};
 				const template = String(locator.value ?? '').trim();
 				if (!template) {
-					throw new NodeOperationError(context.getNode(), 'Template is required', { itemIndex });
+					throw new NodeOperationError(context.getNode(), "'Template' is required", {
+						itemIndex,
+					});
 				}
 				body.template = compactObject({
 					[locator.mode === 'name' ? 'name' : 'id']: template,
@@ -155,7 +195,7 @@ export function buildOperation(
 						context,
 						'templateParameters',
 						itemIndex,
-						'Template Parameters',
+						"'Template Parameters'",
 					),
 				});
 			}

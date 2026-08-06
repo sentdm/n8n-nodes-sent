@@ -57,4 +57,4 @@ These 36 documented stable endpoints are intentionally not exposed. The node is 
 | Webhook | PATCH | `/v3/webhooks/{webhookId}/toggle-status` | Same as above |
 | Webhook | PUT | `/v3/webhooks/{webhookId}` | Same as above |
 
-No deprecated, private, beta, or inferred routes are included. Live side-effect testing requires a user-authorized Sent API key; implementation and mocked verification are complete.
+No deprecated, private, beta, or inferred routes are included. The post-remediation mocked suite passes all 13 files / 282 tests, but the exact clean-install gate with the pinned CLI remains pending. Live side-effect testing requires a user-authorized Sent API key, and mocked coverage does not replace those pre-release checks.

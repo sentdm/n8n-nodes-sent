@@ -28,4 +28,4 @@ Keep changes focused, explain the Sent/n8n source for behavior, list commands ru
 
 ## Releases
 
-Only an authorized maintainer may run `npm run release` and push a version tag. Publication must occur through `.github/workflows/publish.yml`, and the version/tag, provenance, metadata, scanner, and public URLs must be verified afterward. See `docs/verification/submission-checklist.md` for the required ordering, including the one-time bootstrap that must precede the first OIDC publish.
+Only an authorized maintainer may run `npm run release` and push a version tag. Publication must occur through `.github/workflows/publish.yml`, and the version/tag, provenance, metadata, scanner, and public URLs must be verified afterward. See `docs/verification/submission-checklist.md` for the required ordering: the first release uses a short-lived granular npm token in GitHub Actions, then publishing moves to npm Trusted Publishing and the token is removed and revoked.

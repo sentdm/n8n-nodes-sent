@@ -35,6 +35,16 @@ export function computeSentSignature(
 	return `v1,${createHmac('sha256', key).update(signedContent).digest('base64')}`;
 }
 
+export function isValidSentSigningSecret(secret: unknown): secret is string {
+	if (typeof secret !== 'string') return false;
+	try {
+		computeSentSignature('validation', '0', Buffer.alloc(0), secret);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export function verifySentSignature(input: SignatureInput): SignatureResult {
 	const { webhookId, timestamp, signature, rawBody, secret } = input;
 	if (!webhookId || !timestamp || !signature)
@@ -76,13 +86,22 @@ export function deriveEventIdempotencyKey(event: IDataObject, rawBody: Buffer): 
 		typeof event.payload === 'object' && event.payload !== null
 			? (event.payload as IDataObject)
 			: {};
-	const eventType = typeof event.event === 'string' ? event.event : String(event.field ?? 'event');
+	const eventType =
+		typeof event.sub_type === 'string'
+			? event.sub_type
+			: typeof event.event === 'string'
+				? event.event
+				: String(event.field ?? 'event');
+	const occurrence =
+		(typeof payload.updated_at === 'string' && payload.updated_at.trim()) ||
+		(typeof event.timestamp === 'string' && event.timestamp.trim()) ||
+		createHash('sha256').update(rawBody).digest('hex');
 	if (typeof payload.message_id === 'string') {
 		const transition = String(payload.message_status ?? eventType);
-		return `${payload.message_id}:${transition}`;
+		return `${payload.message_id}:${transition}:${occurrence}`;
 	}
 	if (typeof payload.template_id === 'string') {
-		return `${payload.template_id}:${String(payload.status ?? eventType)}`;
+		return `${payload.template_id}:${String(payload.status ?? eventType)}:${occurrence}`;
 	}
 	// Hash the body alone. Sent re-signs a retry with a fresh timestamp, because an
 	// original one would fall outside the replay window, so folding the timestamp into

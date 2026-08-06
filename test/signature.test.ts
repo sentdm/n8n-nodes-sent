@@ -14,7 +14,7 @@ const secret = `whsec_${Buffer.from('test-webhook-secret').toString('base64')}`;
 const webhookId = '7ba7b820-9dad-11d1-80b4-00c04fd430c8';
 const timestamp = '1761905442';
 const rawBody = Buffer.from(
-	'{"field":"message","event":"message.delivered","payload":{"message_id":"m1","message_status":"DELIVERED"}}',
+	'{"field":"message","sub_type":"message.delivered","payload":{"message_id":"m1","message_status":"DELIVERED"}}',
 );
 
 describe('Sent webhook signature verification', () => {
@@ -82,10 +82,33 @@ describe('Sent webhook signature verification', () => {
 	it('derives a transition-specific message idempotency key', () => {
 		expect(
 			deriveEventIdempotencyKey(
-				{ event: 'message.delivered', payload: { message_id: 'm1', message_status: 'DELIVERED' } },
+				{
+					sub_type: 'message.delivered',
+					timestamp: '2026-08-04T00:00:00Z',
+					payload: { message_id: 'm1', message_status: 'DELIVERED' },
+				},
 				rawBody,
 			),
-		).toBe('m1:DELIVERED');
+		).toBe('m1:DELIVERED:2026-08-04T00:00:00Z');
+	});
+
+	it('collapses exact redeliveries but distinguishes a later repeated transition', () => {
+		const firstBody = Buffer.from(
+			'{"field":"message","sub_type":"message.routed","timestamp":"2026-08-04T00:00:00Z","payload":{"message_id":"m1","message_status":"ROUTED","updated_at":"2026-08-04T00:00:00Z","channel":"sms"}}',
+		);
+		const laterBody = Buffer.from(
+			'{"field":"message","sub_type":"message.routed","timestamp":"2026-08-04T00:01:00Z","payload":{"message_id":"m1","message_status":"ROUTED","updated_at":"2026-08-04T00:01:00Z","channel":"whatsapp"}}',
+		);
+		const first = JSON.parse(firstBody.toString('utf8'));
+		const redelivery = JSON.parse(firstBody.toString('utf8'));
+		const later = JSON.parse(laterBody.toString('utf8'));
+
+		expect(deriveEventIdempotencyKey(first, firstBody)).toBe(
+			deriveEventIdempotencyKey(redelivery, firstBody),
+		);
+		expect(deriveEventIdempotencyKey(later, laterBody)).not.toBe(
+			deriveEventIdempotencyKey(first, firstBody),
+		);
 	});
 
 	it('derives a body-stable hash fallback when the event has no resource ID', () => {
@@ -103,7 +126,9 @@ describe('Sent webhook signature verification', () => {
 	});
 
 	it('emits that same body-stable key through the trigger on redelivery', async () => {
-		const body = Buffer.from('{"field":"unknown","event":"unknown.thing"}');
+		const body = Buffer.from(
+			'{"field":"message","sub_type":"message.sent","timestamp":"2026-08-04T00:00:00Z","payload":{"synthetic":"value"}}',
+		);
 		const webhookId = 'wh-redelivery';
 		const secretForRun = secret;
 
@@ -123,7 +148,7 @@ describe('Sent webhook signature verification', () => {
 						'x-webhook-id': webhookId,
 						'x-webhook-timestamp': seconds,
 						'x-webhook-signature': signature,
-						'x-webhook-event-type': 'unknown.thing',
+						'x-webhook-event-type': 'message.sent',
 					},
 					readRawBody: async () => body,
 				}),
@@ -136,7 +161,9 @@ describe('Sent webhook signature verification', () => {
 
 		const now = Math.floor(Date.now() / 1000);
 		// The same event delivered twice, minutes apart, with different valid timestamps.
-		expect(await deliverAt(String(now - 120))).toBe(await deliverAt(String(now)));
+		const first = await deliverAt(String(now - 120));
+		expect(first).toBe(createHash('sha256').update(body).digest('hex'));
+		expect(first).toBe(await deliverAt(String(now)));
 	});
 });
 

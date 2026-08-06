@@ -1,6 +1,12 @@
 # Verification readiness evidence
 
-Assessment date: 2026-08-05. Every row below was produced by running the command in this checkout. "Configured" is not equivalent to published or n8n-verified.
+Baseline assessment date: 2026-08-05. The command log below records the pre-remediation checkout and is retained for traceability; it is **not current release sign-off** after the 2026-08-06 review changes. "Configured" is not equivalent to tested, published, or n8n-verified.
+
+## Current release decision
+
+**Not ready to publish.** The remediation suite passed locally, but the exact clean-install gate with the newly pinned CLI has not completed. Live valid/invalid credentials, organization/profile routing, sandbox sending, pagination, disabled-webhook recovery, signed and forged deliveries, deactivation, and n8n AI Tools UI/output behavior also remain required. Public repository/package state, provenance, the published-package scanner, and Creator Portal review remain external gates.
+
+Post-remediation checks recorded on 2026-08-06: lint, strict TypeScript, build, and all 13 test files / **282 tests** passed with the previously installed `@n8n/node-cli` 0.42.0. The codex-category and publication-workflow guards pass and were each proven to fail against a noncompliant value; `publish.yml` parses as YAML; `npm audit --omit=dev --package-lock-only` reports zero vulnerabilities; and the full lockfile audit still reports six moderate and two high development-tooling advisories. `@n8n/node-cli` 0.42.1 is pinned in `package.json` and `package-lock.json`, but a clean `npm ci` could not finish in the restricted review environment because a required registry tarball was not cached. These results therefore do not replace the clean 0.42.1 install and full gate required before release.
 
 ## Command log
 
@@ -39,34 +45,34 @@ No tests, examples, docs, plans, CI workflows, or source `.ts` files are include
 
 | Requirement | Evidence | Result | Remaining human action |
 | --- | --- | --- | --- |
-| Official scaffold and CLI | `@n8n/node-cli` 0.42.0 pinned in `devDependencies`; `eslint.config.mjs` is the unmodified default re-export that strict mode requires | Pass | Recheck the CLI version before release |
+| Official scaffold and CLI | `@n8n/node-cli` 0.42.1 pinned in `devDependencies` and `package-lock.json`; `eslint.config.mjs` is the unmodified default re-export that strict mode requires | Pin updated; exact clean gate pending | Run `npm ci` and the full gate with 0.42.1 on a network-enabled clean checkout |
 | Node.js 22+ | `engines.node: ">=22"`; both workflows use Node 22 | Pass | None |
 | Clean install | `package-lock.json` committed; both workflows use `npm ci` | Pass | None |
 | English UI and documentation | `n8n-node lint` plus editorial review | Pass | None |
-| API-key credential | `credentials/SentApi.credentials.ts`: password field, `x-api-key`, `GET /v3/me` test, themed icon | Pass structurally | Live valid/invalid-key test |
-| Stable Sent v3 coverage | 7 of the 43 documented operations, each asserted in `test/operations.test.ts`; 36 documented exclusions | Pass | Live representative API smoke tests |
-| Trigger registers a real webhook | `description.webhooks` carries no `restartWebhook`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Live activation against a public HTTPS URL |
+| API-key credential | `credentials/SentApi.credentials.ts`: password field, `x-api-key`, optional child-profile targeting, `GET /v3/me` test, themed icon | Unit-tested only | Live valid/invalid-key and organization/profile-scope tests |
+| Stable Sent v3 coverage | 7 of the 43 documented operations, each asserted in `test/operations.test.ts`; 36 documented exclusions | Unit-tested only | Live representative API smoke tests |
+| Trigger registers and repairs a real webhook | Lifecycle implementation and `test/trigger-lifecycle.test.ts` | Unit-tested only | Live activation, disabled/stale registration recovery, delivery, and deactivation against a public HTTPS URL |
 | Trigger is not an AI tool | `usableAsTool` is `undefined`, asserted in `test/trigger-lifecycle.test.ts` | Pass | Confirm no "Sent Trigger Tool" appears in the AI Tools panel |
-| Raw-body signature security | Deterministic HMAC, replay window, body-mutation and rejection tests; a rejected delivery produces no execution | Pass | Live Sent delivery and a forged-body 401 |
-| Pagination bounded and correct | Constant page size across pages, `limit=150` two-page distinctness test, 10,000-page guard | Pass | Live list smoke test |
-| Errors safe and actionable | Envelope, 204, 401, 422, 429, network, and timeout paths; redaction asserted against `error.message`, not only `JSON.stringify` | Pass | Live 401/403/5xx checks |
+| Raw-body signature security | Deterministic HMAC, replay window, body-mutation and rejection tests; a rejected delivery produces no execution | Unit-tested only | Live Sent delivery and a forged-body 401 |
+| Pagination bounded and correct | Constant page size across pages, `limit=150` two-page distinctness test, 10,000-page guard | Unit-tested only | Live list smoke test |
+| Errors safe and actionable | Envelope, 204, 401, 422, 429, network, timeout, metadata preservation, and redaction assertions | Unit-tested only | Live 401/403/429/5xx checks and Continue On Fail inspection |
 | No runtime dependencies | `package.json` declares no `dependencies`; the production audit is 0 | Pass | None |
 | MIT license | `LICENSE.md`, `package.json` | Pass | None |
 | Branding | Supplied Sent chevron, square `viewBox="0 0 24 24"`, on both nodes and the credential. `test/icons.test.ts` asserts the light theme gets the dark glyph and vice versa, since the files are named by glyph colour | Pass | Brand-owner sign-off |
 | README, support, security | README, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, all pointing at `support@sent.dm` | Pass | None |
 | CI quality gates | `.github/workflows/ci.yml`; the runtime-safety grep is scoped to shipped sources so it cannot match itself | Pass locally | Run in the public repository |
-| Publication and provenance | `.github/workflows/publish.yml`: `id-token: write`, SHA-pinned actions, pinned npm, tag/version gate, provenance, post-publish scan | Configured, not run | Bootstrap npm, add a Trusted Publisher, push a tag |
+| Publication and provenance | `.github/workflows/publish.yml`: `id-token: write`, SHA-pinned actions, pinned npm, tag/version gate, provenance, optional temporary `NPM_TOKEN`, post-publish scan | Configured, not run | First GitHub Actions publish with temporary token; then configure Trusted Publisher and revoke/remove the token |
 | Public GitHub and npm metadata | `package.json` URLs are exact locally | Not externally verifiable | Create the public repository and publish |
-| Community scanner | Registry-only tool; needs a published version | Blocked until publication | Scan the exact published version at `@0.31.0` and `@beta` |
+| Community scanner | Registry-only tool; needs a published version. Checked 2026-08-06: `latest`=`beta`=0.31.0, `stable`=0.29.1 | Blocked until publication | Recheck dist-tags, then scan the exact published version with the pinned and current builds |
 | Creator Portal | `creator-portal-submission.md` | Not submitted | Authenticated human completion after publication |
 
 ## What still needs external state
 
-The public GitHub repository, the npm package, the Git tag, the Actions publish run, npm provenance, the scanner pass, and the Creator Portal submission do not exist yet. Local implementation cannot substitute for them; `submission-checklist.md` has the required ordering.
+The exact clean `npm ci` gate with `@n8n/node-cli` 0.42.1 and the live Sent/n8n checks have not yet been recorded. The public GitHub repository, npm package, Git tag, Actions publish run, npm provenance, scanner pass, and Creator Portal submission also do not exist yet. Local implementation cannot substitute for them; `submission-checklist.md` has the required ordering.
 
 ## Security audit interpretation
 
-The development install inherits eight advisories through `@n8n/node-cli` 0.42.0 and the official starter's release tooling. The published package has no runtime `dependencies` and the production-only audit is zero, so none of the eight reaches a user. Do not run `npm audit fix --force`: npm proposes downgrading the official CLI to 0.20.0 and a major-version bump of the release tooling, which would break alignment with the official starter without an n8n-supported migration.
+The 2026-08-06 lockfile audits after pinning the CLI to 0.42.1 still report six moderate and two high advisories, all in development tooling: `release-it` reaches an affected `undici`, and the CLI's AI-development toolchain reaches an affected `uuid`. The production-only audit is zero and the published package declares no runtime `dependencies`. Do not run `npm audit fix --force`: npm proposes a breaking `release-it` major upgrade and downgrading the official CLI to 0.20.0.
 
 ## Repository security review
 

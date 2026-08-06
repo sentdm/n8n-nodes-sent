@@ -55,7 +55,7 @@ const operations: Record<
 			name: 'Send',
 			value: 'send',
 			action: 'Send message',
-			description: 'Send text or a template over SMS, WhatsApp or RCS',
+			description: 'Send a text or template message over SMS, WhatsApp or RCS',
 		},
 	],
 	numberLookup: [
@@ -89,12 +89,27 @@ const mutationOptions: INodeProperties[] = [
 
 const idFields: INodeProperties[] = [
 	{
-		displayName: 'Contact ID',
+		displayName: 'Contact',
 		name: 'contactId',
-		type: 'string',
+		type: 'resourceLocator',
 		required: true,
-		default: '',
+		default: { mode: 'list', value: '' },
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: 'getContacts', searchable: true },
+			},
+			{
+				displayName: 'By ID',
+				name: 'id',
+				type: 'string',
+				placeholder: 'e.g. 6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+			},
+		],
 		displayOptions: { show: { resource: ['contact'], operation: ['get'] } },
+		description: 'Contact to retrieve',
 	},
 	{
 		displayName: 'Message ID',
@@ -104,6 +119,139 @@ const idFields: INodeProperties[] = [
 		default: '',
 		displayOptions: { show: { resource: ['message'], operation: ['get', 'getActivities'] } },
 	},
+];
+
+export const SENT_OUTPUT_FIELD_OPTIONS: Record<
+	'account' | 'contact' | 'message',
+	Array<{ name: string; value: string }>
+> = {
+	account: [
+		{ name: 'Channels', value: 'channels' },
+		{ name: 'Created At', value: 'created_at' },
+		{ name: 'Description', value: 'description' },
+		{ name: 'Email', value: 'email' },
+		{ name: 'Icon', value: 'icon' },
+		{ name: 'ID', value: 'id' },
+		{ name: 'Name', value: 'name' },
+		{ name: 'Organization ID', value: 'organization_id' },
+		{ name: 'Profiles', value: 'profiles' },
+		{ name: 'Request Metadata', value: '_meta' },
+		{ name: 'Settings', value: 'settings' },
+		{ name: 'Short Name', value: 'short_name' },
+		{ name: 'Status', value: 'status' },
+		{ name: 'Type', value: 'type' },
+	],
+	contact: [
+		{ name: 'Available Channels', value: 'available_channels' },
+		{ name: 'Country Code', value: 'country_code' },
+		{ name: 'Created At', value: 'created_at' },
+		{ name: 'Default Channel', value: 'default_channel' },
+		{ name: 'Format E.164', value: 'format_e164' },
+		{ name: 'Format International', value: 'format_international' },
+		{ name: 'Format National', value: 'format_national' },
+		{ name: 'Format RFC', value: 'format_rfc' },
+		{ name: 'ID', value: 'id' },
+		{ name: 'Is Inherited', value: 'is_inherited' },
+		{ name: 'Opt Out', value: 'opt_out' },
+		{ name: 'Phone Number', value: 'phone_number' },
+		{ name: 'Region Code', value: 'region_code' },
+		{ name: 'Request Metadata', value: '_meta' },
+		{ name: 'Updated At', value: 'updated_at' },
+	],
+	message: [
+		{ name: 'Active Contact Price', value: 'active_contact_price' },
+		{ name: 'Channel', value: 'channel' },
+		{ name: 'Contact ID', value: 'contact_id' },
+		{ name: 'Created At', value: 'created_at' },
+		{ name: 'Customer ID', value: 'customer_id' },
+		{ name: 'Direction', value: 'direction' },
+		{ name: 'Events', value: 'events' },
+		{ name: 'ID', value: 'id' },
+		{ name: 'Message Body', value: 'message_body' },
+		{ name: 'Phone', value: 'phone' },
+		{ name: 'Phone International', value: 'phone_international' },
+		{ name: 'Price', value: 'price' },
+		{ name: 'Region Code', value: 'region_code' },
+		{ name: 'Request Metadata', value: '_meta' },
+		{ name: 'Status', value: 'status' },
+		{ name: 'Template Category', value: 'template_category' },
+		{ name: 'Template ID', value: 'template_id' },
+		{ name: 'Template Name', value: 'template_name' },
+	],
+};
+
+export const SENT_SIMPLIFIED_OUTPUT_FIELDS: Record<'account' | 'contact' | 'message', string[]> = {
+	account: [
+		'id',
+		'type',
+		'name',
+		'email',
+		'short_name',
+		'status',
+		'channels',
+		'settings',
+		'profiles',
+		'organization_id',
+	],
+	contact: [
+		'id',
+		'phone_number',
+		'format_e164',
+		'format_international',
+		'country_code',
+		'region_code',
+		'available_channels',
+		'default_channel',
+		'opt_out',
+		'is_inherited',
+	],
+	message: [
+		'id',
+		'contact_id',
+		'phone',
+		'channel',
+		'status',
+		'direction',
+		'template_name',
+		'message_body',
+		'created_at',
+		'events',
+	],
+};
+
+const outputFields: INodeProperties[] = [
+	{
+		displayName: 'Output',
+		name: 'output',
+		type: 'options',
+		default: 'simple',
+		options: [
+			{ name: 'Simplified', value: 'simple' },
+			{ name: 'Raw', value: 'raw' },
+			{ name: 'Selected Fields', value: 'fields' },
+		],
+		displayOptions: {
+			show: {
+				resource: ['account', 'contact', 'message'],
+				operation: ['get', 'getMany'],
+			},
+		},
+	},
+	...Object.entries(SENT_OUTPUT_FIELD_OPTIONS).map(([resource, options]) => ({
+		displayName: 'Fields',
+		name: 'fields',
+		type: 'multiOptions' as const,
+		default: [],
+		options,
+		description: "The fields to add to the output. 'ID' is always included.",
+		displayOptions: {
+			show: {
+				resource: [resource],
+				operation: resource === 'contact' ? ['get', 'getMany'] : ['get'],
+				output: ['fields'],
+			},
+		},
+	})),
 ];
 
 const paginationFields: INodeProperties[] = [
@@ -124,7 +272,7 @@ const paginationFields: INodeProperties[] = [
 		displayName: 'Limit',
 		name: 'limit',
 		type: 'number',
-		typeOptions: { minValue: 1 },
+		typeOptions: { minValue: 1, maxValue: Number.MAX_SAFE_INTEGER, numberPrecision: 0 },
 		default: 50,
 		displayOptions: {
 			show: {
@@ -156,6 +304,7 @@ export const sentProperties: INodeProperties[] = [
 		displayOptions: { show: { resource: [resource] } },
 	})),
 	...idFields,
+	...outputFields,
 	{
 		displayName: 'Phone Number',
 		name: 'phoneNumber',
@@ -176,7 +325,7 @@ export const sentProperties: INodeProperties[] = [
 		// drama range. Never put an allocatable number in a copy-pasteable placeholder.
 		placeholder: 'e.g. +14155550123,+442079460123',
 		displayOptions: { show: { resource: ['message'], operation: ['send'] } },
-		description: 'Comma-separated recipient phone numbers',
+		description: 'Comma-separated recipient phone numbers, up to 1,000 per request',
 	},
 	{
 		displayName: 'Channels',
@@ -191,7 +340,7 @@ export const sentProperties: INodeProperties[] = [
 		default: ['sent'],
 		displayOptions: { show: { resource: ['message'], operation: ['send'] } },
 		description:
-			'Sent uses automatic routing. Several explicit channels create a broadcast, not a fallback order.',
+			"Choose 'Sent (Automatic Routing)' by itself, or choose explicit channels to broadcast separately on each channel",
 	},
 	{
 		displayName: 'Message Type',

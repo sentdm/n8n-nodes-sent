@@ -29,6 +29,14 @@ export class SentApi implements ICredentialType {
 			default: '',
 			description: 'Sent API key used in the x-api-key request header',
 		},
+		{
+			displayName: 'Profile ID',
+			name: 'profileId',
+			type: 'string',
+			default: '',
+			description:
+				'Optional child profile to target when the API key belongs to a parent organization',
+		},
 	];
 
 	authenticate: IAuthenticateGeneric = {

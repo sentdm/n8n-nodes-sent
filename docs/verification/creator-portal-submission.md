@@ -6,11 +6,11 @@ This is a human handoff document, not evidence of publication or verification.
 | --- | --- |
 | Exact Creator Portal URL | `https://creators.n8n.io/nodes` |
 | npm package name to submit | `@sentdm/n8n-nodes-sent` |
-| Intended public GitHub URL | `https://github.com/sentdm/n8n-nodes-sent` — **not publicly readable on 2026-08-04** |
+| Intended public GitHub URL | `https://github.com/sentdm/n8n-nodes-sent` — **not publicly readable on 2026-08-06** |
 | Latest published version | **Not published / unavailable** |
 | Git tag for published version | **None** |
 | npm provenance | **Not available; no publication occurred** |
-| Community scanner | **Scanner 0.31.0 returned registry HTTP 404 for `@sentdm/n8n-nodes-sent@0.1.0`; published-package scan pending** |
+| Community scanner | **Scanner 0.31.0 returned registry HTTP 404 for `@sentdm/n8n-nodes-sent@0.1.0`; published-package scan pending. On 2026-08-06, npm tags `latest` and `beta` both resolved to 0.31.0.** |
 | Support contact | `support@sent.dm` |
 | Maintainer contact | `support@sent.dm` |
 | API documentation | `https://docs.sent.dm` |
@@ -18,15 +18,17 @@ This is a human handoff document, not evidence of publication or verification.
 
 ## Node operations summary
 
-The `Sent` action node exposes 7 operations across Account, Message, Contact, and Phone Number. Every administrative resource (Conversation, Template, User, Profile, Brand Campaign, Webhook) is deliberately excluded; see [API coverage](api-coverage.md) for the reasons. The `Sent Trigger` registers verified `message.*` webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a redelivery-stable deduplication key.
+The `Sent` action node exposes 7 operations across Account, Message, Contact, and Phone Number. Every administrative resource (Conversation, Template, User, Profile, Brand Campaign, Webhook) is deliberately excluded; see [API coverage](api-coverage.md) for the reasons. The `Sent Trigger` registers `message.*` webhooks, validates HMAC signatures against the exact raw body, enforces a ±300-second replay window, and returns a workflow-side idempotency key. Live lifecycle and delivery evidence is still pending.
 
 ## Known limitations
 
 - Package/repository publication, tag creation, GitHub Actions execution, provenance, public metadata, scanner pass, and Creator Portal submission are external actions still pending.
 - Exact public checks currently fail: npm returns E404 and GitHub is not anonymously readable.
+- The remediation suite passes, but the exact clean-install command gate with the pinned CLI and the live Sent/n8n integration checks must be recorded before publication.
 - Live Sent credential and webhook tests require a user-authorized API key and a public HTTPS endpoint.
 - Sent's current message request schema does not document scheduling.
 - Public HTTPS is required for trigger activation.
+- A signing secret rotated directly in Sent is not returned by the webhook read endpoint; deactivate and reactivate the workflow to register and store a new secret.
 - **Template Parameters** is a JSON field, because template variables are defined by the template rather than by a fixed schema. It accepts literal JSON or an expression that resolves to an object.
 
 ## Public Creator Portal inspection
