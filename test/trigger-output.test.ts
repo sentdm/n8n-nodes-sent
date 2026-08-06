@@ -17,6 +17,11 @@ function delivery(event: unknown, overrides: DeliveryOverrides = {}) {
 	const timestamp = String(Math.floor(Date.now() / 1000));
 	const signature = computeSentSignature(webhookId, timestamp, signedBody, secret);
 	const rawBody = overrides.rawBody ?? signedBody;
+	const bodyEventType =
+		typeof event === 'object' && event !== null && !Array.isArray(event)
+			? ((event as Record<string, unknown>).sub_type ??
+				(event as Record<string, unknown>).event)
+			: undefined;
 	const writeHead = vi.fn();
 	const end = vi.fn();
 	const request = {
@@ -25,11 +30,8 @@ function delivery(event: unknown, overrides: DeliveryOverrides = {}) {
 			'x-webhook-id': webhookId,
 			'x-webhook-timestamp': timestamp,
 			'x-webhook-signature': signature,
-			'x-webhook-event-type': String(
-				typeof event === 'object' && event !== null && !Array.isArray(event)
-					? (event as Record<string, unknown>).event
-					: undefined,
-			),
+			'x-webhook-event-type':
+				typeof bodyEventType === 'string' ? bodyEventType : undefined,
 			...overrides.headers,
 		},
 		readRawBody: async () => rawBody,
@@ -64,7 +66,7 @@ describe('Sent Trigger normalized output', () => {
 			'message status',
 			{
 				field: 'message',
-				event: 'message.delivered',
+				sub_type: 'message.delivered',
 				timestamp: '2026-08-04T00:00:00Z',
 				payload: { message_id: 'm1', message_status: 'DELIVERED' },
 			},
@@ -75,7 +77,7 @@ describe('Sent Trigger normalized output', () => {
 			'inbound message',
 			{
 				field: 'message',
-				event: 'message.received',
+				sub_type: 'message.received',
 				timestamp: '2026-08-04T00:00:00Z',
 				payload: { message_id: 'm2', text: 'Synthetic inbound text' },
 			},
@@ -83,60 +85,76 @@ describe('Sent Trigger normalized output', () => {
 			'm2:message.received:2026-08-04T00:00:00Z',
 		],
 		[
-			'template event',
-			{
-				field: 'templates',
-				event: 'templates.approved',
-				timestamp: '2026-08-04T00:00:00Z',
-				payload: { template_id: 't1', status: 'APPROVED' },
-			},
-			'approved',
-			't1:APPROVED:2026-08-04T00:00:00Z',
-		],
-	])('normalizes a verified %s event', async (_label, event, subtype, idempotencyKey) => {
+				'queued message',
+				{
+					field: 'message',
+					sub_type: 'message.queued',
+					timestamp: '2026-08-04T00:00:00Z',
+					payload: { message_id: 'm3', message_status: 'QUEUED' },
+				},
+				'queued',
+				'm3:QUEUED:2026-08-04T00:00:00Z',
+			],
+		])('normalizes a verified %s event', async (_label, event, subtype, idempotencyKey) => {
 		const { result } = await deliver(event);
 		const json = result.workflowData?.[0]?.[0]?.json;
-		expect(json).toMatchObject({
-			field: event.field,
-			event: event.event,
-			subtype,
-			payload: event.payload,
-			idempotencyKey,
-			headers: { 'x-webhook-event-type': event.event },
-			rawEvent: event,
-		});
+			expect(json).toMatchObject({
+				field: event.field,
+				event: event.sub_type,
+				subtype,
+				payload: event.payload,
+				idempotencyKey,
+				headers: { 'x-webhook-event-type': event.sub_type },
+				rawEvent: event,
+			});
 		expect(JSON.stringify(json)).not.toContain(secret);
 		expect(JSON.stringify(json)).not.toContain('x-webhook-signature');
 	});
 
-	it('normalizes a template event whose body omits the optional event name', async () => {
+	it('trusts the signed subtype without a header and rejects a mismatched header', async () => {
 		const event = {
-			field: 'templates',
+			field: 'message',
+			sub_type: 'message.delivered',
 			timestamp: '2026-08-04T00:00:00Z',
-			payload: { template_id: 't1', status: 'APPROVED' },
+			payload: { message_id: 'm1', message_status: 'DELIVERED' },
 		};
 		const { result } = await deliver(event, {
-			headers: { 'x-webhook-event-type': 'templates' },
+			headers: { 'x-webhook-event-type': undefined },
 		});
 
 		expect(result.workflowData?.[0]?.[0]?.json).toMatchObject({
-			field: 'templates',
-			event: 'templates',
+			field: 'message',
+			event: 'message.delivered',
+			subtype: 'delivered',
 			payload: event.payload,
-			idempotencyKey: 't1:APPROVED:2026-08-04T00:00:00Z',
+			idempotencyKey: 'm1:DELIVERED:2026-08-04T00:00:00Z',
+		});
+
+		const mismatch = await deliver(event, {
+			headers: { 'x-webhook-event-type': 'message.failed' },
+		});
+		expect(mismatch.result).toEqual({ noWebhookResponse: true });
+		expect(mismatch.result.workflowData).toBeUndefined();
+		expect(mismatch.writeHead).toHaveBeenCalledWith(400, {
+			'Content-Type': 'application/json',
 		});
 	});
 });
 
 describe('Sent Trigger signature rejection', () => {
-	const event = { field: 'message', event: 'message.delivered', payload: { message_id: 'm1' } };
+	const event = {
+		field: 'message',
+		sub_type: 'message.delivered',
+		timestamp: '2026-08-04T00:00:00Z',
+		payload: { message_id: 'm1' },
+	};
 
 	it.each([
 		[
 			'a tampered body',
 			{
 				rawBody: Buffer.from(
-					'{"field":"message","event":"message.delivered","payload":{"message_id":"forged"}}',
+					'{"field":"message","sub_type":"message.delivered","payload":{"message_id":"forged"}}',
 				),
 			},
 		],
@@ -182,21 +200,21 @@ describe('Sent Trigger signature rejection', () => {
 		['null', null],
 		['an array', []],
 		['a missing field', { timestamp: '2026-08-04T00:00:00Z', payload: {} }],
-		['a missing timestamp', { field: 'message', event: 'message.sent', payload: {} }],
+		['a missing timestamp', { field: 'message', sub_type: 'message.sent', payload: {} }],
 		[
 			'an invalid timestamp',
-			{ field: 'message', event: 'message.sent', timestamp: 'not-a-date', payload: {} },
+			{ field: 'message', sub_type: 'message.sent', timestamp: 'not-a-date', payload: {} },
 		],
 		[
 			'a missing payload',
-			{ field: 'message', event: 'message.sent', timestamp: '2026-08-04T00:00:00Z' },
+			{ field: 'message', sub_type: 'message.sent', timestamp: '2026-08-04T00:00:00Z' },
 		],
 		[
 			'an array payload',
-			{
-				field: 'message',
-				event: 'message.sent',
-				timestamp: '2026-08-04T00:00:00Z',
+				{
+					field: 'message',
+					sub_type: 'message.sent',
+					timestamp: '2026-08-04T00:00:00Z',
 				payload: [],
 			},
 		],

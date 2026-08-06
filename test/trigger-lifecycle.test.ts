@@ -369,10 +369,15 @@ describe('Sent Trigger dynamic event loading', () => {
 			},
 		]);
 
-		await expect(loadSubtypes.call(context as never)).resolves.toContainEqual({
-			name: 'Delivered',
-			value: 'delivered',
-		});
+		await expect(loadSubtypes.call(context as never)).resolves.toEqual([
+			{ name: 'Delivered', value: 'delivered' },
+			{ name: 'Failed', value: 'failed' },
+			{ name: 'Queued', value: 'queued' },
+			{ name: 'Read', value: 'read' },
+			{ name: 'Received', value: 'received' },
+			{ name: 'Routed', value: 'routed' },
+			{ name: 'Sent', value: 'sent' },
+		]);
 	});
 
 	it('surfaces a non-transient client response instead of hiding it behind the fallback', async () => {

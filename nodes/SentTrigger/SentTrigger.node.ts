@@ -40,15 +40,12 @@ interface RemoteWebhook extends SentWebhook {
 }
 
 const fallbackMessageSubtypes = [
-	'blocked',
 	'delivered',
 	'failed',
-	'filtered',
 	'queued',
 	'read',
 	'received',
 	'routed',
-	'scheduled',
 	'sent',
 ];
 
@@ -519,18 +516,29 @@ export class SentTrigger implements INodeType {
 			typeof parsed.timestamp !== 'string' ||
 			Number.isNaN(Date.parse(parsed.timestamp)) ||
 			!isObject(parsed.payload) ||
+			(parsed.sub_type !== undefined &&
+				(typeof parsed.sub_type !== 'string' || parsed.sub_type.trim().length === 0)) ||
 			(parsed.event !== undefined &&
 				(typeof parsed.event !== 'string' || parsed.event.trim().length === 0))
 		) {
 			return invalidEnvelopeResponse(this, 'Sent webhook body has an invalid event envelope');
 		}
 		const event = parsed as SentIncomingEvent;
-		const eventName = event.event ?? webhookEventType ?? event.field;
-		if (event.field === 'message' && !eventName?.startsWith('message.')) {
+		// Sent's canonical envelope calls this signed body field `sub_type`. Retain the
+		// earlier `event` spelling only for compatibility, but never derive workflow
+		// semantics solely from X-Webhook-Event-Type because that header is not part of
+		// Sent's HMAC input.
+		const signedEventName = event.sub_type ?? event.event;
+		if (
+			event.field !== 'message' ||
+			!signedEventName?.startsWith('message.') ||
+			(webhookEventType !== undefined && webhookEventType !== signedEventName)
+		) {
 			return invalidEnvelopeResponse(this, 'Sent webhook body has an invalid message event');
 		}
+		const eventName = signedEventName;
 		const eventSubtype =
-			typeof eventName === 'string' && eventName.includes('.')
+			eventName.includes('.')
 				? eventName.split('.').slice(1).join('.')
 				: undefined;
 

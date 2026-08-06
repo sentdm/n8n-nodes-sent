@@ -9,6 +9,8 @@ export interface SentTriggerStaticData extends IDataObject {
 
 export interface SentIncomingEvent extends IDataObject {
 	field?: string;
+	sub_type?: string;
+	/** Compatibility with early Sent payload examples; current deliveries use `sub_type`. */
 	event?: string;
 	timestamp?: string;
 	payload?: IDataObject;

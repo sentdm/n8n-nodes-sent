@@ -86,7 +86,12 @@ export function deriveEventIdempotencyKey(event: IDataObject, rawBody: Buffer): 
 		typeof event.payload === 'object' && event.payload !== null
 			? (event.payload as IDataObject)
 			: {};
-	const eventType = typeof event.event === 'string' ? event.event : String(event.field ?? 'event');
+	const eventType =
+		typeof event.sub_type === 'string'
+			? event.sub_type
+			: typeof event.event === 'string'
+				? event.event
+				: String(event.field ?? 'event');
 	const occurrence =
 		(typeof payload.updated_at === 'string' && payload.updated_at.trim()) ||
 		(typeof event.timestamp === 'string' && event.timestamp.trim()) ||
