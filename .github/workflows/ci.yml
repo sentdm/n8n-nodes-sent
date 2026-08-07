@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The packed-contents inspection and the tracked-artifact/unsafe-construct greps live only
+  # in this workflow, and `publish.yml` therefore requires tagging a commit CI has run on.
+  # Manual dispatch makes that re-runnable on an already-pushed `main` without an empty commit.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

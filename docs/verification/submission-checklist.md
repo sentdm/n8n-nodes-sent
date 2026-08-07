@@ -17,6 +17,7 @@ Do these steps in order. They require account ownership and authorization, and c
 - [ ] Make it public and confirm the URL opens in a private browser without authentication.
 
   This is **required before publishing**, not after. The n8n community scanner fetches attested source through npm provenance to `codeload.github.com` and hard-fails when that URL is unreachable.
+
 - [ ] Push the reviewed `main` branch.
 - [ ] Enable GitHub Actions and required branch protections.
 - [ ] Confirm `repository`, `homepage`, `bugs`, and `author` in `package.json` point to that exact repository and identity.
@@ -26,6 +27,7 @@ Do these steps in order. They require account ownership and authorization, and c
 [npm can attach a Trusted Publisher only after the package exists](https://docs.npmjs.com/cli/v11/commands/npm-trust/). Do not solve that bootstrap constraint with a local or placeholder publish: [n8n requires every community-node publish from 1 May 2026 onward to come from GitHub Actions with npm provenance](https://docs.n8n.io/connect/create-nodes/build-your-node/reference/verification-guidelines/). The repository's `publish.yml` follows the official n8n starter's optional token fallback so the first real version can still meet that requirement.
 
 - [ ] Run every command in `docs/verification/verification-readiness.md` on a clean checkout and confirm the recorded results still hold.
+- [ ] Confirm the **CI** workflow has run green on the exact commit you are about to tag: `gh run list --branch main -L 5 --json workflowName,headSha,conclusion`. The packed-contents inspection and the tracked-artifact and unsafe-construct greps live only in `ci.yml`, so a commit CI never saw is a commit those three gates never ran on. If the head commit has no run, dispatch one (`gh workflow run CI --ref main`) rather than pushing an empty commit.
 - [ ] Ensure `git status --short` is empty.
 - [ ] Confirm `CHANGELOG.md` describes the version being released.
 - [ ] Complete the live Sent and n8n checks still marked pending in `verification-readiness.md`; mocked tests are not a substitute for these checks.

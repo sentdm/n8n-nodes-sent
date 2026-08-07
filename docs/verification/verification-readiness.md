@@ -10,11 +10,10 @@ Post-remediation checks recorded on 2026-08-06: lint, strict TypeScript, build, 
 
 ## Clean 0.42.1 release gate
 
-Recorded 2026-08-06 on a network-enabled checkout of `main` at `a34c0eb`, working tree clean. `main` has
-since advanced to `ddc5024`, which only deletes a planning document and touches no shipped source, so
-these results carry forward unchanged. This is
+Recorded 2026-08-06 on a network-enabled checkout of `main` at `a34c0eb`, working tree clean. This is
 the gate that `submission-checklist.md` §3 and the execution plan's step 3 require, and it closes the
-"exact clean `npm ci` with 0.42.1" release blocker.
+"exact clean `npm ci` with 0.42.1" release blocker. See _Release-tag correction_ below for the
+2026-08-07 re-run that carries these results forward.
 
 Environment: Node.js `v24.6.0`, npm `11.17.0`, `@n8n/node-cli` **0.42.1**.
 
@@ -41,6 +40,36 @@ built `dist/nodes/Sent/actions/properties.js`, the 7 rows of `api-coverage.md`, 
 
 The packed size grew from the 2026-08-05 baseline's 18.2 kB / 67.2 kB to 23.4 kB / 93.4 kB at the same
 27 files, which reflects the canonical-envelope and durable trigger-creation work, not new files.
+
+## Release-tag correction
+
+Recorded 2026-08-07, on top of `f865819`. Two gaps were found by querying live GitHub state rather than
+re-reading this file, and both are fixed:
+
+**GitHub Actions CI had never run on the release candidate.** The most recent CI run was `1532fa8`, the
+PR #1 merge. The twelve commits after it — PR #2's roughly 1,900 lines across `Sent.node.ts`,
+`SentTrigger.node.ts`, `actions/properties.ts`, `helpers/operations.ts`, `helpers/signature.ts` and
+eleven test files — produced no run on either the pull request or the merge push. This matters because
+`npm pack --dry-run` and the tracked-artifact and unsafe-construct greps exist **only** in `ci.yml`, which
+is why `publish.yml` instructs tagging a commit CI has run on. `ci.yml` now also accepts
+`workflow_dispatch`, so the gate is re-runnable on an already-pushed `main` without an empty commit.
+
+**`npm run release` would have produced a tag the publish gate rejects.** `n8n-node release` invokes
+`release-it` with no `--git.tagName`, and no `release-it` configuration existed, so release-it's default
+`v${version}` applied. That default still matches `publish.yml`'s `'*.*.*'` trigger glob, because `*`
+matches the leading `v0` — so the workflow would start and then fail its own tag/version equality check.
+`package.json` now sets `release-it.git.tagName` to `${version}`, and
+`test/release-workflow.test.ts` asserts the tag convention and the publish gate agree. That assertion was
+proven to fail with the `package.json` change reverted, then restored.
+
+Neither gap affects the `0.1.0` tag itself, which `submission-checklist.md` §4 has the maintainer create
+by hand as a bare version.
+
+Local gate re-run on `f865819` plus these three changes, with `@n8n/node-cli` 0.42.1: `npm run lint`,
+`npx tsc --noEmit -p tsconfig.json` and `npm run build` all exit 0; `npm test` passes 13 files /
+**283 tests** (the one added assertion); `npm pack --dry-run` reports the same 27 files at
+**23.5 kB packed / 93.6 kB unpacked**, the 0.1 kB growth being the `release-it` key in `package.json`;
+both workflow files parse as YAML; `git status --short` lists only the three intended files.
 
 ## Live check attestation
 
