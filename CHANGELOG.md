@@ -2,7 +2,7 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and Semantic Versioning.
 
-## [0.1.0] - 2026-08-05
+## [0.1.0] - 2026-08-07
 
 Initial release.
 
@@ -14,6 +14,6 @@ Initial release.
 - Sent Trigger for `message.*` events, with idempotent webhook creation, registration repair/reactivation, raw-body HMAC-SHA256 verification, a ±300-second replay window, occurrence-aware deduplication keys, and deregistration on deactivation.
 - Shared typed transport with page-number pagination, redacted error reporting, sandbox, and idempotency support.
 - Square Sent brand icons for the light and dark n8n themes, on both nodes and the credential.
-- 282 unit tests, importable example workflows, CI quality gates, and a provenance publishing workflow with an Actions-only first-publish path and npm Trusted Publishing handoff.
+- 283 unit tests, importable example workflows, CI quality gates, and a provenance publishing workflow with an Actions-only first-publish path and npm Trusted Publishing handoff.
 
 [0.1.0]: https://github.com/sentdm/n8n-nodes-sent/releases/tag/0.1.0
