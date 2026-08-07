@@ -122,9 +122,54 @@ and `bugs`, the issues page, both `docs.sent.dm` links including
 `docs.sent.dm/reference/api/authentication`, the four `docs.n8n.io` links, `creators.n8n.io/nodes`, and
 every `blob/main` and `tree/main` link in the README. None returned 404.
 
-Still pending and unverifiable until publication: the npm package, the Git tag, the Actions publish run,
-npm provenance attestations, the community-package scanner result, and Creator Portal submission. Scanner
-dist-tags rechecked 2026-08-06: `latest` = `beta` = 0.31.0, `stable` = 0.29.1, unchanged from 2026-08-05.
+**Step 5 items 2–4 — branch protection, first publish, provenance and scanner. Complete 2026-08-07.**
+
+Branch protection is a **repository ruleset**, not classic branch protection, so
+`GET /branches/main/protection` returns 404 and is a false negative; read `GET /rulesets` instead.
+Ruleset `protect-main` (id 20529371) is `enforcement: active` on `~DEFAULT_BRANCH` with `deletion`,
+`non_fast_forward`, a `pull_request` rule requiring one approval, and a strict `required_status_checks`
+rule on context **`validate`** — which is the job name in `ci.yml`, confirmed against the check GitHub
+actually published on the head commit. `bypass_actors` grants RepositoryRole 5 (admin) `always`, so the
+maintainer can push directly. `target` is `branch`, so tags are out of scope and the release tag pushes
+freely.
+
+CI ran green on `1e0f293` before tagging, all steps including the three that exist only in `ci.yml`
+(`Build`, `Inspect package`, and the tracked-artifact/unsafe-construct greps). Tag `0.1.0` was then
+created on that exact commit, with the tag name equal to `package.json`'s version.
+
+| Evidence                            | Result                                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Publish workflow run                | `31163306463`, triggered by the `0.1.0` tag; `Publish with provenance` succeeded                             |
+| `npm view … version`                | `0.1.0`; `dist-tags.latest` = `0.1.0`                                                                        |
+| `npm view … gitHead`                | `1e0f293ab05289977ab3d3a80962d59a0be12749` — the exact CI-verified commit                                    |
+| `npm view … dist.attestations`      | `predicateType: https://slsa.dev/provenance/v1`                                                              |
+| Sigstore transparency log           | `https://search.sigstore.dev/?logIndex=2367421819`                                                           |
+| Tarball                             | 27 files, 23.5 kB packed / 93,591 B unpacked, shasum `c26286ff7eaee0c88c9ac029bf61d7843dab4802`              |
+| Build environment recorded on npm   | `_npmVersion` 11.19.0, `_nodeVersion` 22.23.1 — the workflow's pins                                          |
+| Scanner, pinned `@0.31.0`           | **passed all security checks**; provenance check passed, source fetched from `sentdm/n8n-nodes-sent@1e0f293` |
+| Scanner dist-tags at scan time      | `latest` = `beta` = 0.31.0, so the pinned run is the current build; `stable` = 0.29.1                        |
+| `releases/tag/0.1.0` (in CHANGELOG) | **HTTP 200** — GitHub serves a tag page even with no Release object created                                  |
+
+**The workflow's `Scan published package` step failed, and the failure was spurious.** It ran roughly
+30 seconds after publish and got `Analysis failed: Request failed with status code 404`. The publish
+itself had succeeded — the step log ends with `+ @sentdm/n8n-nodes-sent@0.1.0` and a signed provenance
+statement. The cause was npm registry propagation: the version document
+`/@sentdm%2Fn8n-nodes-sent/0.1.0` was already serving correct metadata while the **packument** still
+404'd, and the packument is what the scanner fetches. It took roughly 3.5 minutes to appear, after which
+the pinned scanner passed on the first attempt. The `//@sentdm/...` double slash visible in the scanner's
+error dump is not the cause; the registry returns identical results for single and double slash.
+
+Two consequences worth carrying forward:
+
+- **Do not re-run the publish job to clear the red X.** Re-running replays every step, and the
+  already-published guard in `publish.yml` then exits 1 with "refusing to republish". That guard is
+  correct; the job is simply not idempotent. Re-run the scanner outside the workflow, which is what
+  `submission-checklist.md` §4 asks for anyway.
+- **Open follow-up for 0.1.1:** the scan step has no retry, so any first publish of a package will hit
+  this. It should poll the packument until it resolves before scanning.
+
+Still pending: npm Trusted Publisher verification (`npm trust list` needs an authenticated session),
+deleting the `NPM_TOKEN` secret, revoking the Granular Access Token, and Creator Portal submission.
 
 Not verifiable from an unauthenticated session, so left for the maintainer: that GitHub Actions is enabled
 and required branch protections are configured on `main`.
