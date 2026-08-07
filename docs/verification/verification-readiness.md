@@ -168,8 +168,38 @@ Two consequences worth carrying forward:
 - **Open follow-up for 0.1.1:** the scan step has no retry, so any first publish of a package will hit
   this. It should poll the packument until it resolves before scanning.
 
-Still pending: npm Trusted Publisher verification (`npm trust list` needs an authenticated session),
-deleting the `NPM_TOKEN` secret, revoking the Granular Access Token, and Creator Portal submission.
+**Step 5 item 5 — Trusted Publishing handoff. Complete 2026-08-07.**
+
+| Evidence                  | Result                                                                                                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm Trusted Publisher     | **Maintainer-attested**, configured in the npm web UI as GitHub Actions / `sentdm` / `n8n-nodes-sent` / `publish.yml`, environment blank, allowed action `npm publish` only |
+| `gh secret list`          | **empty** — the bootstrap `NPM_TOKEN` secret is deleted                                                                                                                     |
+| `gh variable list`        | empty — nothing shadows the deleted secret                                                                                                                                  |
+| npm Granular Access Token | Revoked by the maintainer                                                                                                                                                   |
+
+The Trusted Publisher is attested rather than machine-verified: `npm trust list @sentdm/n8n-nodes-sent`
+returns HTTP 401 without an authenticated npm session, and the packument does not expose trusted-publisher
+configuration, so there is no unauthenticated read for it. This is the same attestation convention this
+document already uses for the live Sent and n8n checks.
+
+**Accepted risk, recorded deliberately: the OIDC publish path has never executed.** `0.1.0` was published
+with the bootstrap token, which is now revoked, and the replacement binding is confirmed by eye only. If it
+is misconfigured, the symptom appears at the next release as an authentication failure in the
+`Publish with provenance` step — after the tag already exists. Recovery is to fix the publisher and re-tag,
+and because the already-published guard refuses to republish, a version number that partially landed cannot
+be reused. Since `deletion` and `non_fast_forward` in the ruleset target branches rather than tags, a tag
+that failed before publishing can be deleted and recreated.
+
+**Scanner propagation fix, added 2026-08-07 for the next release.** `publish.yml` now waits for the
+published version to appear in the npm packument before scanning, bounded at 30 attempts × 20 s. The wait
+checks that `versions[<tag>]` is present rather than that the packument returns 200, because from the
+second release onward the packument already exists and returns 200 immediately, so a status-code-only
+check would wait for nothing. `test/release-workflow.test.ts` asserts both the presence of the version
+check and that the wait precedes the scan; it was proven to fail with the wait step removed, then
+restored. The poll predicate was exercised against the live registry: `0.1.0` resolves as listed, `9.9.9`
+as not listed, and a malformed body falls through to a retry rather than a false pass.
+
+Still pending: Creator Portal submission.
 
 Not verifiable from an unauthenticated session, so left for the maintainer: that GitHub Actions is enabled
 and required branch protections are configured on `main`.

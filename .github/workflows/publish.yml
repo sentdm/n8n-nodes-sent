@@ -77,6 +77,29 @@ jobs:
           fi
           npm run release
 
+      # npm's packument lags the publish itself. The scanner fetches the packument and reports a
+      # bare 404 as "Analysis failed: Request failed with status code 404", which is
+      # indistinguishable from a real security failure. On the 0.1.0 first publish the version
+      # document served correct metadata immediately while the packument 404'd for about 3.5
+      # minutes. Wait for the packument to actually list this version before scanning: for a second
+      # and later release the packument already exists and returns 200 at once, so checking only the
+      # status code would not wait for anything.
+      - name: Wait for the published version to appear in the npm packument
+        shell: bash
+        run: |
+          packument='https://registry.npmjs.org/@sentdm%2Fn8n-nodes-sent'
+          for attempt in $(seq 1 30); do
+            if curl -sS -H 'Cache-Control: no-cache' "$packument" \
+              | node -e 'let s="";process.stdin.on("data",d=>{s+=d}).on("end",()=>{try{process.exit(JSON.parse(s).versions?.[process.argv[1]]?0:1)}catch{process.exit(1)}})' "$GITHUB_REF_NAME"; then
+              echo "packument lists $GITHUB_REF_NAME after $attempt attempt(s)"
+              exit 0
+            fi
+            echo "packument does not list $GITHUB_REF_NAME yet (attempt $attempt); waiting"
+            sleep 20
+          done
+          echo "npm packument never listed $GITHUB_REF_NAME. The publish may still have succeeded: check the publish step log and re-run the scanner manually rather than re-running this job, which refuses to republish." >&2
+          exit 1
+
       - name: Scan published package
         shell: bash
         run: |

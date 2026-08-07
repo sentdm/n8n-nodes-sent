@@ -23,6 +23,24 @@ describe('npm publication workflow', () => {
 		expect(publishWorkflow).toContain('@n8n/scan-community-package@0.31.0');
 	});
 
+	// The scanner reads the npm packument, which lags the publish. A bare 404 surfaces as
+	// "Analysis failed" and is indistinguishable from a real security failure, so the workflow must
+	// wait before scanning. The wait has to check that the packument *lists this version*: on a
+	// second release the packument already returns 200 immediately, so a status-code-only check
+	// would wait for nothing. Asserting the order matters as much as asserting the poll exists.
+	it('waits for the published version to appear in the packument before scanning', () => {
+		const waitIndex = publishWorkflow.indexOf('registry.npmjs.org/@sentdm%2Fn8n-nodes-sent');
+		const scanIndex = publishWorkflow.indexOf('@n8n/scan-community-package@');
+
+		expect(waitIndex).toBeGreaterThan(-1);
+		expect(scanIndex).toBeGreaterThan(-1);
+		expect(waitIndex).toBeLessThan(scanIndex);
+
+		// Presence of the version in `versions`, not just a 200, and a bounded retry.
+		expect(publishWorkflow).toContain('.versions?.[process.argv[1]]');
+		expect(publishWorkflow).toMatch(/for attempt in \$\(seq 1 \d+\); do/);
+	});
+
 	// `n8n-node release` shells out to release-it without a `--git.tagName` flag, so release-it's
 	// own default of `v${version}` applies unless package.json overrides it. That default still
 	// matches the `'*.*.*'` trigger glob — `*` matches the leading `v0` — so the workflow starts
