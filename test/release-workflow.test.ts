@@ -23,6 +23,27 @@ describe('npm publication workflow', () => {
 		expect(publishWorkflow).toContain('@n8n/scan-community-package@0.31.0');
 	});
 
+	// `registry-url` on actions/setup-node writes an .npmrc with
+	// `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` and sets NODE_AUTH_TOKEN to the literal
+	// placeholder `XXXXX-XXXXX-XXXXX-XXXXX` when no real token is given. npm then believes it has a
+	// credential, never attempts OIDC, and the registry rejects the junk token with
+	// `404 Not Found - PUT`. It broke the first Trusted Publishing release and was invisible while a
+	// bootstrap NPM_TOKEN was overwriting the placeholder, so it must not come back.
+	// Assert against the workflow with comment lines removed: the comments deliberately name both
+	// `registry-url` and NODE_AUTH_TOKEN to explain why neither is configured, and a raw-text check
+	// matches that explanation. This is the same self-matching trap `ci.yml` documents for its grep.
+	it('does not let setup-node inject a placeholder npm auth token', () => {
+		const directives = publishWorkflow
+			.split('\n')
+			.filter((line) => !/^\s*#/.test(line))
+			.join('\n');
+
+		expect(directives).not.toMatch(/^\s*registry-url:/m);
+		expect(directives).not.toContain('NODE_AUTH_TOKEN');
+		// The explanation must survive, so the input is not reintroduced by someone reading only YAML.
+		expect(publishWorkflow).toContain('Deliberately no `registry-url`');
+	});
+
 	// The scanner reads the npm packument, which lags the publish. A bare 404 surfaces as
 	// "Analysis failed" and is indistinguishable from a real security failure, so the workflow must
 	// wait before scanning. The wait has to check that the packument *lists this version*: on a

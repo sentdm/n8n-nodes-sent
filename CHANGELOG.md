@@ -13,6 +13,7 @@ version string and this changelog entry. This release adds no features and chang
 - Release tags are created as the bare version (`0.1.1`) rather than release-it's default `v0.1.1`, which the publish workflow's tag/version check rejects.
 - The publish workflow now waits for the published version to appear in the npm packument before running the community scanner. The scanner reads the packument, which lags the publish, and reported that lag as a scan failure on 0.1.0.
 - Published through npm Trusted Publishing (OIDC) rather than the temporary bootstrap token that npm requires for a package's first release.
+- The publish workflow no longer passes `registry-url` to `actions/setup-node`. That input writes an `.npmrc` pointing at a placeholder `NODE_AUTH_TOKEN`, which made npm skip OIDC entirely and fail with `404 Not Found - PUT`. The problem was masked while a bootstrap token was overwriting the placeholder.
 
 ## [0.1.0] - 2026-08-07
 
