@@ -18,10 +18,11 @@ function executeContext(parameters: Record<string, unknown>) {
 }
 
 describe('Sent API credential', () => {
-	it('injects the API key in x-api-key', () => {
+	it('injects the API key in x-api-key and identifies the integration', () => {
 		const credential = new SentApi();
 		expect(credential.authenticate.properties.headers).toEqual({
 			'x-api-key': '={{$credentials.apiKey}}',
+			'X-Sent-Integration': 'n8n',
 		});
 	});
 

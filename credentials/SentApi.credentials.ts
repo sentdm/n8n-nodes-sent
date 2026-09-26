@@ -44,6 +44,9 @@ export class SentApi implements ICredentialType {
 		properties: {
 			headers: {
 				'x-api-key': '={{$credentials.apiKey}}',
+				// Lets Sent recognise traffic from this node (e.g. to mark the account as connected
+				// to n8n). Set here so the credential test and every node request carry it.
+				'X-Sent-Integration': 'n8n',
 			},
 		},
 	};
